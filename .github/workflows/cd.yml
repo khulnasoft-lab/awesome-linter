@@ -1,0 +1,147 @@
+name: Publish Images
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-main-${{ matrix.images.target }}
+      cancel-in-progress: true
+    permissions:
+      contents: read
+      deployments: write
+      issues: write
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        images:
+          - environment: Production-SLIM
+            prefix: slim-
+            target: slim
+          - environment: Production
+            prefix: ""
+            target: standard
+    timeout-minutes: 60
+    env:
+      CONTAINER_IMAGE_ID: "ghcr.io/khulnasoft-lab/awesome-linter:${{ matrix.images.prefix }}latest"
+      CONTAINER_IMAGE_TARGET: "${{ matrix.images.target }}"
+    steps:
+      - name: Free Disk space
+        shell: bash
+        run: |
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/share/dotnet
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Retrieve Datetime
+        run: echo "BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "${GITHUB_ENV}"
+
+      - name: Build Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          build-args: |
+            BUILD_DATE=${{ env.BUILD_DATE }}
+            BUILD_REVISION=${{ github.sha }}
+            BUILD_VERSION=${{ github.sha }}
+          load: true
+          push: false
+          secrets: |
+            GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          tags: |
+            ${{ env.CONTAINER_IMAGE_ID }}
+          target: "${{ matrix.images.target }}"
+
+      - name: Run Test Suite
+        run: make test
+
+      - name: Run Awesome-Linter Tests
+        run: |
+          docker run \
+          -e RUN_LOCAL=true \
+          -e TEST_CASE_RUN=true \
+          -e ANSIBLE_DIRECTORY=.automation/test/ansible \
+          -e ACTIONS_RUNNER_DEBUG=true \
+          -e RENOVATE_SHAREABLE_CONFIG_PRESET_FILE_NAMES="default.json,hoge.json" \
+          -e ERROR_ON_MISSING_EXEC_BIT=true \
+          -v "${GITHUB_WORKSPACE}:/tmp/lint" \
+          "${CONTAINER_IMAGE_ID}"
+
+      - name: Lint Entire Codebase
+        run: |
+          docker run \
+          -e RUN_LOCAL=true \
+          -e OUTPUT_DETAILS=detailed \
+          -e ACTIONS_RUNNER_DEBUG=true \
+          -e RENOVATE_SHAREABLE_CONFIG_PRESET_FILE_NAMES="default.json,hoge.json" \
+          -e ERROR_ON_MISSING_EXEC_BIT=true \
+          -v "${GITHUB_WORKSPACE}:/tmp/lint" \
+          "${CONTAINER_IMAGE_ID}"
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3.0.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Start ${{ matrix.images.environment }} Deployment
+        uses: bobheadxi/deployments@v1.4.0
+        id: deployment
+        with:
+          step: start
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: ${{ matrix.images.environment }}
+
+      - name: Build and Push Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          build-args: |
+            BUILD_DATE=${{ env.BUILD_DATE }}
+            BUILD_REVISION=${{ github.sha }}
+            BUILD_VERSION=${{ github.sha }}
+          load: false
+          push: true
+          secrets: |
+            GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          tags: |
+            ${{ env.CONTAINER_IMAGE_ID }}
+          target: "${{ matrix.images.target }}"
+
+      - name: Update ${{ matrix.images.environment }} Deployment
+        uses: bobheadxi/deployments@v1.4.0
+        if: always()
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          status: ${{ job.status }}
+          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+          env: ${{ steps.deployment.outputs.env }}
+          env_url: https://github.com/khulnasoft-lab/awesome-linter
+
+      - name: Create Issue on Failure
+        uses: actions/github-script@v7
+        if: failure()
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const create = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: "Failed to deploy to production",
+              body: "Automation has failed us!\nMore information can be found at:\n - ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+              assignees: [
+                "zkoppert", "Hanse00"
+              ]
+            })

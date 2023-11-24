@@ -1,0 +1,34 @@
+# KhulnaSoft Awesome-Linter Slim Image Action
+
+The **KhulnaSoft Awesome-Linter** maintains `two` major images:
+
+- `awesome-linter/awesome-linter:v5`
+- `awesome-linter/awesome-linter:slim-v5`
+
+In order to help users pull this image more naturally, the `action.yml` in this directory can help users pull the `slim image`.
+
+## Slim Image
+
+The slim `awesome-linter/awesome-linter:slim-v5` comes with all supported linters but removes the following:
+
+- `rust` linters
+- `dotenv` linters
+- `armttk` linters
+- `pwsh` linters
+- `c#` linters
+
+By removing these linters, we were able to bring the image size down by `2gb` and drastically speed up the build and download time.
+The behavior will be the same for non-supported languages, and will skip languages at run time.
+Example usage:
+
+```yml
+################################
+# Run Linter against code base #
+################################
+- name: Lint Code Base
+  uses: awesome-linter/awesome-linter/slim@v5
+  env:
+    VALIDATE_ALL_CODEBASE: false
+    DEFAULT_BRANCH: main
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```

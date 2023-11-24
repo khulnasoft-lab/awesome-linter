@@ -1,0 +1,10 @@
+{
+  "name": "Awesome-Linter",
+  "context": "..",
+  "image": "ghcr.io/khulnasoft-lab/awesome-linter:latest",
+  "extensions": [
+    "github.vscode-pull-request-github",
+    "rogalmic.bash-debug",
+    "EditorConfig.EditorConfig"
+  ]
+}

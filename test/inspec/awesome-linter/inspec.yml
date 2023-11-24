@@ -1,0 +1,11 @@
+---
+name: awesome-linter
+title: awesome-linter InSpec Profile
+maintainer: KhulnaSoft DevOps
+copyright: GitHub
+copyright_email: github_devops@github.com
+license: Apache-2.0
+summary: InSpec profile to validate awesome-linter
+version: 1.0.0
+supports:
+  platform: linux
