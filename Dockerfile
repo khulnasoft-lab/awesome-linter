@@ -262,6 +262,11 @@ WORKDIR /stage
 RUN ./build-venvs.sh
 
 # Grab small clean image to build slim ###################################
+<<<<<<< HEAD
+=======
+################################################################################
+FROM alpine:3.19.0 as slim
+>>>>>>> a54c95d37b1313db2b01c059b62bacef8e504e2a
 
 ############################
 # Get the build arguements #
