@@ -97,8 +97,9 @@ COPY dependencies/ /
 ###################################################################
 # Install Dependencies                                            #
 # The chown fixes broken uid/gid in ast-types-flow dependency     #
-# (see https://github.com/khulnasoft-lab/awesome-linter/issues/3901)  #
+#(see https://github.com/khulnasoft-lab/awesome-linter/issues/3901)#
 ###################################################################
+
 RUN npm install && chown -R "$(id -u)":"$(id -g)" node_modules && bundle install
 
 ##############################
@@ -253,19 +254,14 @@ RUN --mount=type=secret,id=GITHUB_TOKEN /install-lua.sh && rm -rf /install-lua.s
 #########################
 RUN find /usr/ -type f -name '*.md' -exec rm {} +
 
-################################################################################
 # Grab small clean image to build python packages ##############################
-################################################################################
 FROM python:3.11.5-alpine3.17 as python_builder
 RUN apk add --no-cache bash g++ git libffi-dev
 COPY dependencies/python/ /stage
 WORKDIR /stage
 RUN ./build-venvs.sh
 
-################################################################################
 # Grab small clean image to build slim ###################################
-################################################################################
-FROM alpine:3.18.5 as slim
 
 ############################
 # Get the build arguements #
@@ -398,10 +394,6 @@ RUN ACTIONS_RUNNER_DEBUG=true WRITE_LINTER_VERSIONS_FILE=true IMAGE="${IMAGE}" /
 # Set the entrypoint #
 ######################
 ENTRYPOINT ["/action/lib/linter.sh"]
-
-################################################################################
-# Grab small clean image to build standard ###############################
-################################################################################
 FROM slim as standard
 
 ###############
@@ -451,7 +443,7 @@ RUN --mount=type=secret,id=GITHUB_TOKEN /install-pwsh.sh && rm -rf /install-pwsh
 COPY scripts/install-arm-ttk.sh /
 RUN --mount=type=secret,id=GITHUB_TOKEN /install-arm-ttk.sh && rm -rf /install-arm-ttk.sh
 
-########################################################################################
+##
 # Run to build version file and validate image again because we installed more linters #
-########################################################################################
+##
 RUN ACTIONS_RUNNER_DEBUG=true WRITE_LINTER_VERSIONS_FILE=true IMAGE="${IMAGE}" /action/lib/linter.sh

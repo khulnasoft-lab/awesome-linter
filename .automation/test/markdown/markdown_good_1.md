@@ -2,7 +2,7 @@
 
 This is just standard good markdown.
 
-::::: Second level header
+# Second level header
 
 This header follows the step down from `level 1`.
 
@@ -14,7 +14,7 @@ This header follows the step down from `level 1`.
 ls -la
 ```
 
-::::::: Walk away
+# Walk away
 
 We're all done **here**.
 - [Link Action](https://github.com)

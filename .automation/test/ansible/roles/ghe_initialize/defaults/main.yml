@@ -1,19 +1,17 @@
 ---
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::: Standard Variables for GHE Configure :::::
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::: These variables will be the defaults. If you want to override them,
-::::: then change them in 'vars/main.yml' instead of here
+
+
+# Standard Variables for GHE Configure #
+
+
+# These variables will be the defaults. If you want to override them,
+# then change them in 'vars/main.yml' instead of here
 github_admin_password: U53r1234
 github_initial_user_password: U53r1234
 github_host: github.service
 github_admin_port: 8443
-
-::::::::::::::::::::::::::::::::::::::::::::
 # Default Rate Vars #
-::::::::::::::::::::::::::::::::::::::::::::
+
 api_rate_limiting_enabled: "true"
 api_rate_limiting_unauthenticated_rate_limit: "60"
 api_rate_limiting_default_rate_limit: "5000"
@@ -24,22 +22,16 @@ api_rate_limiting_lfs_default_rate_limit: "3000"
 api_rate_limiting_graphql_unauthenticated_rate_limit: "0"
 api_rate_limiting_graphql_default_rate_limit: "5000"
 
-::::::::::::::::::::::::::::::::::::::::::::::
 # Default Abuse Vars #
-::::::::::::::::::::::::::::::::::::::::::::::
+
 abuse_rate_limiting_enabled: "true"
 abuse_rate_limiting_requests_per_minute: "900"
 abuse_rate_limiting_cpu_millis_per_minute: "90000"
 abuse_rate_limiting_search_cpu_millis_per_minute: "7500"
-
-::::::::::::::::::::::::::::::::::::::::::
 # Default Cas Vars #
-::::::::::::::::::::::::::::::::::::::::::
 cas_url: "null"
 
-::::::::::::::::::::::::::::::::::::::::::::::::::#
 # Default Collectd Vars #
-::::::::::::::::::::::::::::::::::::::::::::::::::#
 collectd_enabled: "true"
 collectd_server: "metrics.service"
 collectd_port: "25826"
@@ -47,9 +39,9 @@ collectd_encryption: "null"
 collectd_username: "null"
 collectd_password: "null"
 
-::::::::::::::::::::::::::::::::::::::::::::
+
 # Default Core Vars #
-::::::::::::::::::::::::::::::::::::::::::::
+
 core_private_mode: "true"
 core_public_pages: "false"
 core_subdomain_isolation: "false"
@@ -61,24 +53,24 @@ core_builtin_auth_fallback: "false"
 core_expire_sessions: "false"
 core_package_version: "null"
 
-::::::::::::::::::::::::::::::::::::::::::::::::
+
 # Default GitHub Vars #
-::::::::::::::::::::::::::::::::::::::::::::::::
+
 github_ssl_enabled: "true"
 github_ssl_tls_mode: "tlsv12"
 github_ssl_cert: "null"
 github_ssl_key: "null"
 
-::::::::::::::::::::::::::::::::::::::::::::::::::#
+#
 # Default Governor Vars #
-::::::::::::::::::::::::::::::::::::::::::::::::::#
+#
 governor_quotas_enabled: "false"
 governor_limit_user: "null"
 governor_limit_network: "null"
 
-::::::::::::::::::::::::::::::::::::::::::::
+
 # Default LDAP Vars #
-::::::::::::::::::::::::::::::::::::::::::::
+
 ldap_host: "null"
 ldap_port: "389"
 ldap_method: "None"
@@ -99,34 +91,34 @@ ldap_profile_mail: "mail"
 ldap_profile_key: "null"
 ldap_profile_gpg_key: "null"
 
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 # Default Loadbalancer Vars #
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 loadbalancer_http_forward: "false"
 loadbalancer_proxy_protocol: "false"
 
-::::::::::::::::::::::::::::::::::::::::::::::::::
+
 # Default Mapping Vars #
-::::::::::::::::::::::::::::::::::::::::::::::::::
+
 mapping_enabled: "false"
 mapping_tileserver: "null"
 mapping_basemap: "null"
 mapping_token: "null"
 
-::::::::::::::::::::::::::::::::::::::::::
+:
 # Default NTP Vars #
-::::::::::::::::::::::::::::::::::::::::::
+:
 ntp_primary_server: "0.ubuntu.pool.ntp.org"
 ntp_secondary_server: "1.ubuntu.pool.ntp.org"
 
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 # Default GHE Pages Vars #
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 pages_enabled: "true"
 
-::::::::::::::::::::::::::::::::::::::::::::
+
 # Default SAML Vars #
-::::::::::::::::::::::::::::::::::::::::::::
+
 saml_sso_url: "null"
 saml_certificate: "null"
 saml_certificate_path: "/data/user/common/idp.crt"
@@ -142,9 +134,9 @@ saml_emails_attribute: "emails"
 saml_ssh_keys_attribute: "public_keys"
 saml_gpg_keys_attribute: "gpg_keys"
 
-::::::::::::::::::::::::::::::::::::::::::::
+
 # Default SMTP Vars #
-::::::::::::::::::::::::::::::::::::::::::::
+
 smtp_enabled: "false"
 smtp_address: "null"
 smtp_authentication: "null"
@@ -158,25 +150,25 @@ smtp_support_address_type: email
 smtp_noreply_address: "noreply@test.github.local"
 smtp_discard_to_noreply_address: "false"
 
-::::::::::::::::::::::::::::::::::::::::::::
+
 # Default SNMP Vars #
-::::::::::::::::::::::::::::::::::::::::::::
+
 snmp_enabled: "true"
 snmp_version: "2"
 snmp_community: "public"
 snmp_users: "null"
 
-::::::::::::::::::::::::::::::::::::::::::::::::
+
 # Default Syslog Vars #
-::::::::::::::::::::::::::::::::::::::::::::::::
+
 syslog_enabled: "false"
 syslog_server: "null"
 syslog_protocol_name: "udp"
 syslog_tls_enabled: "false"
 syslog_cert: "null"
 
-::::::::::::::::::::::::::::::::::::::::::::::::
+
 # Default Splunk Vars #
-::::::::::::::::::::::::::::::::::::::::::::::::
+
 splunk_host: splunk.service
 splunk_port: 9997

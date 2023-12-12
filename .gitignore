@@ -79,3 +79,4 @@ awesome-linter.report
 
 # Test reports
 test/reports
+**/.DS_Store

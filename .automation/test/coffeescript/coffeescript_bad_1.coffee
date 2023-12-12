@@ -8,9 +8,9 @@
 # Author:
 #   admiralawkbar@github.com
 
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 # Drop Hammer array of images #
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 dropHammer = [
   "https://s1.yimg.com/uu/api/res/1.2/.kFQAfQ6KQmlf5ip8.UzNA--/dz0xMjMwO2g9NjkyO2FwcGlkPXl0YWNoeW9u/http://media.zenfs.com/en-US/video/video.snl.com/SNL_1554_08_Update_03_Harry_Caray.png",
   "http://media.tumblr.com/d12ea80b3a86dfc5fe36d3f306254fe4/tumblr_inline_mq1r0tbBCb1qz4rgp.jpg",
@@ -21,9 +21,9 @@ dropHammer = [
   "http://cdn.meme.am/instances/500x/57495736.jpg",
 ]
 
-::::::::::::::::::::::::::::::::::::::::
+
 # Thank you array #
-::::::::::::::::::::::::::::::::::::::::
+
 thanks = [
   "You're welcome! Piece of cake...",
   It was nothing...
@@ -33,50 +33,50 @@ thanks = [
   "Prego..."
 ]
 
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 # Start the robot for listening #
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 module.exports = (robot) -> )
 
-  :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+  
   # Show the adapter connected #
-  :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+  
   robot.respond /ADAPTER$/i, (msg) ->
     msg.send robot.adapterNameS
 
-  :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+  
   # Echo back the response #
-  :::::::::::::::::::::::::::::::::::::::::::::::::::::::
+  
   robot.respond /ECHO (.*)$/i, (msg) ->
     msg.send msg.match[2]
 
-  ::::::::::::::::::::::::::::::::::::::
+  
   # Whats going on #
-  ::::::::::::::::::::::::::::::::::::::
+  
   robot.respond /whats going on/i, (msg) ->
     msg.send "not much... robot stuff..."
 
-  ::::::::::::::::::::::::::::::::::::::::
+  
   # Drop the hammer #
-  ::::::::::::::::::::::::::::::::::::::::
+  
   robot.respond /drop the hammer/i, (msg) ->
      msg.send "Commencing the hammer dropping..."
      msg.send msg.random dropHammer
 
-  ::::::::::::::::::::::::::::::::
+  
   # Vape Nation #
-  ::::::::::::::::::::::::::::::::
+  
   robot.respond /lets roll/i, (msg) ->
     msg.send "First Class! Vape Nation!!! @beardofedu"
 
-  ::::::::::::::::::::::::::::::
+  
   # Hubot Ping #
-  ::::::::::::::::::::::::::::::
+  
   robot.respond /PING$/i, (msg) ->
     msg.sned PONG
 
-::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::::::::::::::::::::::::::::
-::::: END OF THE SCRIPT :::::
-::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::::::::::::::::::::::::::::
+
+
+# END OF THE SCRIPT #
+
+

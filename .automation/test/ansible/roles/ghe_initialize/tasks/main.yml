@@ -5,9 +5,9 @@
     - ghe_primary
     - initialize
   block:
-    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    
     # Need to run the tasks to stand up the GHE instance #
-    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    
     # Configure the base system
     - ansible.builtin.include_tasks: ghe-initial-configuration.yml
 
@@ -15,9 +15,9 @@
   tags:
     - openldap
   block:
-    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    
     # Need to run the tasks to config LDAP on the GHE instance #
-    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    
     # Configure the base system
     - ansible.builtin.include_tasks: ghe-ldap-configuration.yml
 
@@ -27,8 +27,8 @@
     - ghe_primary
     - initialize
   block:
-    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    
     # Need to run the tasks to stand up the GHE instance #
-    :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    
     # Configure the base system
     - ansible.builtin.include_tasks: ghe-api-config-apply.yml

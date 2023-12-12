@@ -1,8 +1,8 @@
-::::: Bad Markdown
+# Bad Markdown
 
 This is just standard good markdown.
 
-::::::::::::: Second level header
+# Second level header
 
 This header does **NOT** follow the step down from `level 1`.
 
