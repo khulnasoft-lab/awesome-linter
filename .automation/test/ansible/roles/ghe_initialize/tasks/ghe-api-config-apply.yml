@@ -1,16 +1,16 @@
 ---
 - name: GHE API Configuration
-  ######################
+  ::::::::::::::::::::::::::::::::::::::::::::::
   # Set the tags block #
-  ######################
+  ::::::::::::::::::::::::::::::::::::::::::::::
   tags:
     - github
     - ghe_primary
     - initialize
   block:
-  # ##################################
+  # :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   # # Run config to take in settings #
-  # ##################################
+  # :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   # - name: Run ghe-config-apply for Settings to Take Effect
   #   shell: "nohup ghe-config-apply </dev/null >/dev/null 2>&1 &"
   #   async: 45
@@ -18,9 +18,9 @@
   #   args:
   #     executable: "/bin/bash"
 
-  ##################################
+  :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   # Run config to take in settings #
-  ##################################
+  :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   - name: Run Configure for Settings to Take Effect
     ansible.builtin.uri:
       url: "https://{{ ansible_host }}:8443/setup/api/configure"
@@ -32,9 +32,9 @@
       validate_certs: "no"
       status_code: 202
 
-  #################################################################
+  ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   # Wait for 'ghe-config-apply' to be completed before continuing #
-  #################################################################
+  ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   - name: Ensure ghe-config-apply is completed
     # https://docs.ansible.com/ansible/uri_module.html
     # yamllint disable-line
@@ -52,9 +52,9 @@
     retries: 100
     delay: 10
 
-  #####################################
+  :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::#
   # Remove the files from the machine #
-  #####################################
+  :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::#
   # Need to remove the license file and settings
   # files that were copied to the ghe server
   - name: Remove temp Files from GHE

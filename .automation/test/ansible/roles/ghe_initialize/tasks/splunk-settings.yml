@@ -1,20 +1,20 @@
 ---
 - name: Splunk settings
-  ######################
+  ::::::::::::::::::::::::::::::::::::::::::::::
   # Set the tags block #
-  ######################
+  ::::::::::::::::::::::::::::::::::::::::::::::
   tags:
     - splunk
     - github
     - ghe_primary
     - initialize
   block:
-  ###############################
+  :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   # Wait for admin port to open #
-  ###############################
+  :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   - name: Wait for Admin port to come up (Port 8443)
-    ## Doc: http://docs.ansible.com/ansible/latest/modules/wait_for_module.html
-    ## Helpful Google: ansible wait_for
+    ::::: Doc: http://docs.ansible.com/ansible/latest/modules/wait_for_module.html
+    ::::: Helpful Google: ansible wait_for
     ansible.builtin.wait_for:
       host: "{{ ansible_host }}"
       port: 8443
@@ -23,9 +23,9 @@
       state: started
     changed_when: false
 
-  #################################
+  :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   # Wait for successful open port #
-  #################################
+  :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   - name: Wait for http status 200
     changed_when: false
     ansible.builtin.uri:
@@ -37,9 +37,9 @@
     retries: 100
     delay: 3
 
-  #######################################################
+  :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   # Copy License file to GHE to decrypt file and upload #
-  #######################################################
+  :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   # Copy of the file will allow for Ansible Vault to decrypt the file
   # and place it on the new remote machine
   - name: Copy splunk-settings.json File to GHE
@@ -51,9 +51,9 @@
       group: admin
       mode: 0644
 
-  ########################################################
+  :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   # Set up Admin password, License, and Initial Settings #
-  ########################################################
+  :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   - name: Setup Splunk
     # yamllint disable
     ansible.builtin.shell: curl --fail -Lk \

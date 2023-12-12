@@ -1,8 +1,8 @@
 ---
 - name: Wait for admin port to open
-  ######################
+  ::::::::::::::::::::::::::::::::::::::::::::::
   # Set the tags block #
-  ######################
+  ::::::::::::::::::::::::::::::::::::::::::::::
   tags:
     - metrics
     - github
@@ -11,8 +11,8 @@
 
   block:
   - name: Wait for Admin port to come up (Port 8443)
-    ## Doc: http://docs.ansible.com/ansible/latest/modules/wait_for_module.html
-    ## Helpful Google: ansible wait_for
+    ::::: Doc: http://docs.ansible.com/ansible/latest/modules/wait_for_module.html
+    ::::: Helpful Google: ansible wait_for
     ansible.builtin.wait_for:
       host: "{{ ansible_host }}"
       port: 8443
@@ -21,9 +21,9 @@
       state: started
     changed_when: false
 
-  #################################
+  :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   # Wait for successful open port #
-  #################################
+  :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   - name: Wait for http status 200
     changed_when: false
     ansible.builtin.uri:
@@ -35,9 +35,9 @@
     retries: 100
     delay: 3
 
-  #######################################################
+  :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   # Copy License file to GHE to decrypt file and upload #
-  #######################################################
+  :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   # Copy of the file will allow for Ansible Vault to decrypt the file
   # and place it on the new remote machine
   - name: Copy collectd-settings.json File to GHE
@@ -49,9 +49,9 @@
       group: admin
       mode: 0644
 
-  ########################################################
+  :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   # Set up Admin password, License, and Initial Settings #
-  ########################################################
+  :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   - name: Setup Grafana
     # yamllint disable
     ansible.builtin.shell: curl --fail -Lk \
@@ -65,9 +65,9 @@
     notify: ghe config apply
 
 
-  #####################################
+  :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::#
   # Edit forwarding.conf with metrics #
-  #####################################
+  :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::#
   - name: Copy forwarding.conf File to GHE
     become: true
     ansible.builtin.template:
@@ -78,9 +78,9 @@
       group: root
       mode: 0644
 
-  ###########################################
+  ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   # Restart Collectd service to take effect #
-  ###########################################
+  ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   - name: Restart Collectd service
     become: true
     ansible.builtin.service:

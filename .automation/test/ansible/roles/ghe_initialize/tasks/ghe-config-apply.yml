@@ -1,17 +1,17 @@
 ---
 - name: GHE Config apply
-  ######################
+  ::::::::::::::::::::::::::::::::::::::::::::::
   # Set the tags block #
-  ######################
+  ::::::::::::::::::::::::::::::::::::::::::::::
   tags:
     - github
     - ghe_primary
     - initialize
 
   block:
-  ########################################
+  ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   # Copy the script to the local machine #
-  ########################################
+  ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   - name: Copy the script to the GHE instance
     become: true
     ansible.builtin.template:
@@ -22,9 +22,9 @@
       group: admin
       mode: 0755
 
-  ##################################
+  :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   # Run config to take in settings #
-  ##################################
+  :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
   - name: Run ghe-config-apply for Settings to Take Effect
     ansible.builtin.shell: "nohup ./tmp/ghe-config-apply.sh </dev/null >/dev/null 2>&1 &"
     async: 300

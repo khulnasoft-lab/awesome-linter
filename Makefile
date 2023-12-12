@@ -4,7 +4,7 @@
 all: info docker test ## Run all targets.
 
 .PHONY: test
-test: info inspec ## Run tests
+test: info validate-container-image-labels inspec test-find ## Run tests
 
 # if this session isn't interactive, then we don't want to allocate a
 # TTY, which would fail, but if it is interactive, we do want to attach
@@ -51,6 +51,18 @@ ifeq ($(AWESOME_LINTER_TEST_CONTAINER_URL),)
 AWESOME_LINTER_TEST_CONTAINER_URL := "ghcr.io/khulnasoft-lab/awesome-linter:latest"
 endif
 
+ifeq ($(BUILD_DATE),)
+BUILD_DATE := $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
+endif
+
+ifeq ($(BUILD_REVISION),)
+BUILD_REVISION := $(shell git rev-parse HEAD)
+endif
+
+ifeq ($(BUILD_VERSION),)
+BUILD_VERSION := $(shell git rev-parse HEAD)
+endif
+
 .PHONY: inspec
 inspec: inspec-check ## Run InSpec tests
 	DOCKER_CONTAINER_STATE="$$(docker inspect --format "{{.State.Running}}" $(AWESOME_LINTER_TEST_CONTAINER_NAME) 2>/dev/null || echo "")"; \
@@ -75,12 +87,31 @@ inspec: inspec-check ## Run InSpec tests
 docker: ## Build the container image
 	@if [ -z "${GITHUB_TOKEN}" ]; then echo "GITHUB_TOKEN environment variable not set. Please set your GitHub Personal Access Token."; exit 1; fi
 	DOCKER_BUILDKIT=1 docker buildx build --load \
-		--build-arg BUILD_DATE=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ') \
-		--build-arg BUILD_REVISION=$(shell git rev-parse --short HEAD) \
-		--build-arg BUILD_VERSION=$(shell git rev-parse --short HEAD) \
+		--build-arg BUILD_DATE=$(BUILD_DATE) \
+		--build-arg BUILD_REVISION=$(BUILD_REVISION) \
+		--build-arg BUILD_VERSION=$(BUILD_VERSION) \
 		--secret id=GITHUB_TOKEN,env=GITHUB_TOKEN \
 		-t $(AWESOME_LINTER_TEST_CONTAINER_URL) .
 
 .phony: docker-pull
 docker-pull: ## Pull the container image from registry
 	docker pull $(AWESOME_LINTER_TEST_CONTAINER_URL)
+
+.phony: validate-container-image-labels
+validate-container-image-labels: ## Validate container image labels
+	$(CURDIR)/test/validate-docker-labels.sh \
+		$(AWESOME_LINTER_TEST_CONTAINER_URL) \
+		$(BUILD_DATE) \
+		$(BUILD_REVISION) \
+		$(BUILD_VERSION)
+
+.phony: test-find
+test-find: ## Run awesome-linter on a subdirectory with USE_FIND_ALGORITHM=true
+	docker run \
+		-e RUN_LOCAL=true \
+		-e ACTIONS_RUNNER_DEBUG=true \
+		-e ERROR_ON_MISSING_EXEC_BIT=true \
+		-e DEFAULT_BRANCH=main \
+		-e USE_FIND_ALGORITHM=true \
+		-v "$(CURDIR)/.github":/tmp/lint \
+		$(AWESOME_LINTER_TEST_CONTAINER_URL)
