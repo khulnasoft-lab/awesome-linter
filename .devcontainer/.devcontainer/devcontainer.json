@@ -1,0 +1,83 @@
+{
+  "name": "awesome-linter",
+  "image": "ghcr.io/khulnasoft-lab/awesome-linter:latest",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true,
+        "editor.formatOnSaveMode": "file",
+        "editor.wordWrap": "off",
+        "prettier.resolveGlobalModules": true,
+        "[markdown]": {
+          "editor.wordWrap": "off"
+        },
+        "[shellscript]": {
+          "editor.defaultFormatter": "mkhl.shfmt"
+        },
+        "[terraform]": {
+          "editor.defaultFormatter": "hashicorp.terraform"
+        },
+        "[terraform-vars]": {
+          "editor.defaultFormatter": "hashicorp.terraform"
+        }
+      },
+      "extensions": [
+        "DavidAnson.vscode-markdownlint",
+        "EditorConfig.EditorConfig",
+        "HashiCorp.terraform",
+        "esbenp.prettier-vscode",
+        "GitHub.vscode-github-actions",
+        "GitHub.vscode-pull-request-github",
+        "mads-hartmann.bash-ide-vscode",
+        "mkhl.shfmt",
+        "ms-azuretools.vscode-docker",
+        "ms-vscode.makefile-tools",
+        "timonwong.shellcheck"
+      ]
+    }
+  },
+  "mounts": [
+    {
+      "source": "${localWorkspaceFolder}/TEMPLATES",
+      "target": "/action/lib/.automation",
+      "type": "bind"
+    },
+    {
+      "source": "${localWorkspaceFolder}/lib",
+      "target": "/action/lib",
+      "type": "bind"
+    },
+    {
+      "source": "${localWorkspaceFolder}/dependencies/Gemfile",
+      "target": "/Gemfile",
+      "type": "bind"
+    },
+    {
+      "source": "${localWorkspaceFolder}/dependencies/Gemfile.lock",
+      "target": "/Gemfile.lock",
+      "type": "bind"
+    },
+    {
+      "source": "${localWorkspaceFolder}/dependencies/package.json",
+      "target": "/package.json",
+      "type": "bind"
+    },
+    {
+      "source": "${localWorkspaceFolder}/dependencies/package-lock.json",
+      "target": "/package-lock.json",
+      "type": "bind"
+    },
+    {
+      "source": "${localWorkspaceFolder}/scripts/bash-exec.sh",
+      "target": "/usr/bin/bash-exec",
+      "type": "bind"
+    },
+    {
+      "source": "${localWorkspaceFolder}/scripts/git-merge-conflict-markers.sh",
+      "target": "/usr/bin/git-merge-conflict-markers",
+      "type": "bind"
+    }
+  ],
+  "runArgs": ["--env-file", ".devcontainer/devcontainer.env"]
+}
