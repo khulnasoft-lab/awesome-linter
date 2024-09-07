@@ -1,0 +1,93 @@
+---
+#################################
+# GitHub Dependabot Config info #
+#################################
+version: 2
+updates:
+  - package-ecosystem: "devcontainers"
+    commit-message:
+      prefix: "chore(devcontainer)"
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 100
+
+  - package-ecosystem: github-actions
+    commit-message:
+      prefix: "ci(github-actions)"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 100
+
+  - package-ecosystem: "npm"
+    commit-message:
+      prefix: "deps(npm)"
+    directory: "/dependencies"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 100
+
+  - package-ecosystem: "bundler"
+    commit-message:
+      prefix: "deps(bundler)"
+    directory: "/dependencies"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 100
+
+  - package-ecosystem: "docker"
+    commit-message:
+      prefix: "deps(docker)"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 100
+
+  - package-ecosystem: "pip"
+    commit-message:
+      prefix: "deps(python)"
+    directory: "/dependencies/python/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 100
+
+  - package-ecosystem: "gradle"
+    commit-message:
+      prefix: "deps(java)"
+    directory: "/dependencies/checkstyle"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 100
+
+  - package-ecosystem: "gradle"
+    commit-message:
+      prefix: "deps(java)"
+    directory: "/dependencies/google-java-format"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 100
+
+  - package-ecosystem: "gradle"
+    commit-message:
+      prefix: "deps(java)"
+    directory: "/dependencies/ktlint"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 100
+
+  - package-ecosystem: "docker"
+    commit-message:
+      prefix: "ci(dev-docker)"
+    directory: "/dev-dependencies"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 100
+
+  - package-ecosystem: "npm"
+    commit-message:
+      prefix: "ci(dev-npm)"
+    directory: "/dev-dependencies"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 100
