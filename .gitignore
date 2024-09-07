@@ -77,6 +77,24 @@ awesome-linter.report
 # Code coverage data for tests
 .coverage
 
+# Terraform workspace
+.terraform
+
 # Test reports
 test/reports
-**/.DS_Store
+
+# Developer credentials
+.github-personal-access-token
+
+# Test leftovers
+.lintr
+test/linters/rust_clippy/**/Cargo.lock
+test/linters/rust_clippy/**/target
+test/linters/**/src/bin
+test/linters/**/src/obj
+
+# Awesome-linter ouputs
+awesome-linter-output/
+custom-awesome-linter-output-directory-name/
+awesome-linter-github-actions-step-summary-output*
+github-step-summary.md
