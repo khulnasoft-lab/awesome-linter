@@ -1,458 +1,259 @@
 #!/usr/bin/env bash
 
-:
-:
-########### Awesome-Linter linting Functions @admiralawkbar ######################
-:
-:
-########################## FUNCTION CALLS BELOW ################################
-:
-:
-#### Function LintCodebase #####################################################
 function LintCodebase() {
-  # Call comes through as:
-  # LintCodebase "${LANGUAGE}" "${LINTER_NAME}" "${LINTER_COMMAND}" "${FILTER_REGEX_INCLUDE}" "${FILTER_REGEX_EXCLUDE}" "${TEST_CASE_RUN}" "${!LANGUAGE_FILE_ARRAY}"
-  ####################
-  # Pull in the vars #
-  ####################
-  FILE_TYPE="${1}" && shift            # Pull the variable and remove from array path  (Example: JSON)
-  LINTER_NAME="${1}" && shift          # Pull the variable and remove from array path  (Example: jsonlint)
-  LINTER_COMMAND="${1}" && shift       # Pull the variable and remove from array path  (Example: jsonlint -c ConfigFile /path/to/file)
-  FILTER_REGEX_INCLUDE="${1}" && shift # Pull the variable and remove from array path  (Example: */src/*,*/test/*)
-  FILTER_REGEX_EXCLUDE="${1}" && shift # Pull the variable and remove from array path  (Example: */examples/*,*/test/*.test)
-  TEST_CASE_RUN="${1}" && shift        # Flag for if running in test cases
-  EXPR_BATCH_WORKER="${1}" && shift    # Flag for if running in experimental batch worker
-  FILE_ARRAY=("$@")                    # Array of files to validate                    (Example: ${FILE_ARRAY_JSON})
+  local FILE_TYPE
+  FILE_TYPE="${1}" && shift
+  local TEST_CASE_RUN
+  TEST_CASE_RUN="${1}" && shift
 
-  ##########################
-  # Initialize empty Array #
-  ##########################
-  LIST_FILES=()
+  declare -n VALIDATE_LANGUAGE
+  VALIDATE_LANGUAGE="VALIDATE_${FILE_TYPE}"
 
-  ###################################################
-  # Array to track directories where tflint was run #
-  ###################################################
-  declare -A TFLINT_SEEN_DIRS
-
-  ################
-  # Set the flag #
-  ################
-  SKIP_FLAG=0
-  INDEX=0
-
-  # We use these flags to check how many "bad" and "good" test cases we ran
-  BAD_TEST_CASES_COUNT=0
-  GOOD_TEST_CASES_COUNT=0
-
-  ############################################################
-  # Check to see if we need to go through array or all files #
-  ############################################################
-  if [ ${#FILE_ARRAY[@]} -eq 0 ]; then
-    SKIP_FLAG=1
-    debug " - No files found in changeset to lint for language:[${FILE_TYPE}]"
-  else
-    # We have files added to array of files to check
-    LIST_FILES=("${FILE_ARRAY[@]}") # Copy the array into list
-  fi
-
-  debug "SKIP_FLAG: ${SKIP_FLAG}, list of files to lint: ${LIST_FILES[*]}"
-
-  ###############################
-  # Check if any data was found #
-  ###############################
-  if [ ${SKIP_FLAG} -eq 0 ]; then
-    WORKSPACE_PATH="${GITHUB_WORKSPACE}"
-    if [ "${TEST_CASE_RUN}" == "true" ]; then
-      WORKSPACE_PATH="${GITHUB_WORKSPACE}/${TEST_CASE_FOLDER}"
-    fi
-    debug "Workspace path: ${WORKSPACE_PATH}"
-
-    ################
-    # print header #
-    ################
-    info ""
-    info "----------------------------------------------"
-    info "----------------------------------------------"
-
-    debug "Running LintCodebase. FILE_TYPE: ${FILE_TYPE}. Linter name: ${LINTER_NAME}, linter command: ${LINTER_COMMAND}, TEST_CASE_RUN: ${TEST_CASE_RUN}, FILTER_REGEX_INCLUDE: ${FILTER_REGEX_INCLUDE}, FILTER_REGEX_EXCLUDE: ${FILTER_REGEX_EXCLUDE} files to lint: ${FILE_ARRAY[*]}"
-
-    if [ "${TEST_CASE_RUN}" = "true" ]; then
-      info "Testing Codebase [${FILE_TYPE}] files..."
+  if [[ "${VALIDATE_LANGUAGE}" == "false" ]]; then
+    if [[ "${TEST_CASE_RUN}" == "false" ]]; then
+      debug "Skip validation of ${FILE_TYPE} because VALIDATE_LANGUAGE is ${VALIDATE_LANGUAGE}"
+      unset -n VALIDATE_LANGUAGE
+      return 0
     else
-      info "Linting [${FILE_TYPE}] files..."
-    fi
-
-    info "----------------------------------------------"
-    info "----------------------------------------------"
-
-    # TODO: When testing in experimental batch mode, for implemented linters should filter out these files
-    # if [[ ${FILE} != *"${TEST_CASE_DIRECTORY}"* ]] && [ "${TEST_CASE_RUN}" == "true" ]; then
-    #   debug "Skipping ${FILE} because it's not in the test case directory for ${FILE_TYPE}..."
-    #   continue
-    # fi
-    # TODO: How to test $EXPR_BATCH_WORKER == true, now just skip it
-    if [ "$EXPR_BATCH_WORKER" == "true" ] && [ "${LINTER_NAME}" == "cfn-lint" ]; then
-      ParallelLintCodebaseCfnLint "${FILE_TYPE}" "${LINTER_NAME}" "${LINTER_COMMAND}" "${TEST_CASE_RUN}" "${FILE_ARRAY[@]}"
-      return 0
-    elif [ "$EXPR_BATCH_WORKER" == "true" ] && [ "${LINTER_NAME}" == "eslint" ]; then
-      ParallelLintCodebaseEslint "${FILE_TYPE}" "${LINTER_NAME}" "${LINTER_COMMAND}" "${TEST_CASE_RUN}" "${FILE_ARRAY[@]}"
-      return 0
-    elif [ "$EXPR_BATCH_WORKER" == "true" ] && [ "${LINTER_NAME}" == "gitleaks" ]; then
-      ParallelLintCodebaseGitleaks "${FILE_TYPE}" "${LINTER_NAME}" "${LINTER_COMMAND}" "${TEST_CASE_RUN}" "${FILE_ARRAY[@]}"
-      return 0
-    fi
-
-    ##################
-    # Lint the files #
-    ##################
-    for FILE in "${LIST_FILES[@]}"; do
-      debug "Linting FILE: ${FILE}"
-      ###################################
-      # Get the file name and directory #
-      ###################################
-      FILE_NAME=$(basename "${FILE}" 2>&1)
-      DIR_NAME=$(dirname "${FILE}" 2>&1)
-
-      ############################
-      # Get the file pass status #
-      ############################
-      # Example: markdown_good_1.md -> good
-      FILE_STATUS=$(echo "${FILE_NAME}" | cut -f2 -d'_')
-      # Example: clan_format_good_1.md -> good
-      SECONDARY_STATUS=$(echo "${FILE_NAME}" | cut -f3 -d'_')
-
-      ####################################
-      # Catch edge cases of double names #
-      ####################################
-      if [ "${SECONDARY_STATUS}" == 'good' ] || [ "${SECONDARY_STATUS}" == 'bad' ]; then
-        FILE_STATUS="${SECONDARY_STATUS}"
-      fi
-
-      ###################
-      # Check if docker #
-      ###################
-      if [[ ${FILE_TYPE} == *"DOCKER"* ]]; then
-        debug "FILE_TYPE for FILE ${FILE} is related to Docker: ${FILE_TYPE}"
-        if [[ ${FILE} == *"good"* ]]; then
-          debug "Setting FILE_STATUS for FILE ${FILE} to 'good'"
-          #############
-          # Good file #
-          #############
-          FILE_STATUS='good'
-        elif [[ ${FILE} == *"bad"* ]]; then
-          debug "Setting FILE_STATUS for FILE ${FILE} to 'bad'"
-          ############
-          # Bad file #
-          ############
-          FILE_STATUS='bad'
-        fi
-      fi
-
-      #####################
-      # Check if Renovate #
-      #####################
-      if [[ ${FILE_TYPE} == *"RENOVATE"* ]]; then
-        debug "FILE_TYPE for FILE ${FILE} is related to Renovate: ${FILE_TYPE}"
-        if [[ ${FILE} == *"good"* ]]; then
-          debug "Setting FILE_STATUS for FILE ${FILE} to 'good'"
-          #############
-          # Good file #
-          #############
-          FILE_STATUS='good'
-        elif [[ ${FILE} == *"bad"* ]]; then
-          debug "Setting FILE_STATUS for FILE ${FILE} to 'bad'"
-          ############
-          # Bad file #
-          ############
-          FILE_STATUS='bad'
-        fi
-      fi
-
-      #######################################
-      # Check if Cargo.toml for Rust Clippy #
-      #######################################
-      if [[ ${FILE_TYPE} == *"RUST"* ]] && [[ ${LINTER_NAME} == "clippy" ]]; then
-        debug "FILE_TYPE for FILE ${FILE} is related to Rust Clippy: ${FILE_TYPE}"
-        if [[ ${FILE} == *"good"* ]]; then
-          debug "Setting FILE_STATUS for FILE ${FILE} to 'good'"
-          #############
-          # Good file #
-          #############
-          FILE_STATUS='good'
-        elif [[ ${FILE} == *"bad"* ]]; then
-          debug "Setting FILE_STATUS for FILE ${FILE} to 'bad'"
-          ############
-          # Bad file #
-          ############
-          FILE_STATUS='bad'
-        fi
-      fi
-
-      #########################################################
-      # If not found, assume it should be linted successfully #
-      #########################################################
-      if [ -z "${FILE_STATUS}" ] || { [ "${FILE_STATUS}" != "good" ] && [ "${FILE_STATUS}" != "bad" ]; }; then
-        debug "FILE_STATUS (${FILE_STATUS}) is empty, or not set to 'good' or 'bad'. Assuming it should be linted correctly. Setting FILE_STATUS to 'good'..."
-        FILE_STATUS="good"
-      fi
-
-      INDIVIDUAL_TEST_FOLDER="${FILE_TYPE,,}" # Folder for specific tests. By convention, it's the lowercased FILE_TYPE
-      TEST_CASE_DIRECTORY="${TEST_CASE_FOLDER}/${INDIVIDUAL_TEST_FOLDER}"
-      debug "File: ${FILE}, FILE_NAME: ${FILE_NAME}, DIR_NAME:${DIR_NAME}, FILE_STATUS: ${FILE_STATUS}, INDIVIDUAL_TEST_FOLDER: ${INDIVIDUAL_TEST_FOLDER}, TEST_CASE_DIRECTORY: ${TEST_CASE_DIRECTORY}"
-
-      if [[ ${FILE_TYPE} != "ANSIBLE" ]]; then
-        # These linters expect files inside a directory, not a directory. So we add a trailing slash
-        TEST_CASE_DIRECTORY="${TEST_CASE_DIRECTORY}/"
-        debug "${FILE_TYPE} expects to lint individual files. Updated TEST_CASE_DIRECTORY to: ${TEST_CASE_DIRECTORY}"
-      fi
-
-      if [[ ${FILE} != *"${TEST_CASE_DIRECTORY}"* ]] && [ "${TEST_CASE_RUN}" == "true" ]; then
-        debug "Skipping ${FILE} because it's not in the test case directory for ${FILE_TYPE}..."
-        continue
-      fi
-
-      ##################################
-      # Increase the linted file index #
-      ##################################
-      (("INDEX++"))
-
-      ##############
-      # File print #
-      ##############
-      info "---------------------------"
-      info "File:[${FILE}]"
-
-      #################################
-      # Add the language to the array #
-      #################################
-      LINTED_LANGUAGES_ARRAY+=("${FILE_TYPE}")
-
-      ####################
-      # Set the base Var #
-      ####################
-      LINT_CMD=''
-
-      #####################
-      # Check for ansible #
-      #####################
-      if [[ ${FILE_TYPE} == "ANSIBLE" ]]; then
-        debug "ANSIBLE_DIRECTORY: ${ANSIBLE_DIRECTORY}, LINTER_COMMAND:${LINTER_COMMAND}, FILE: ${FILE}"
-        LINT_CMD=$(
-          cd "${ANSIBLE_DIRECTORY}" || exit
-          # Don't pass the file to lint to enable ansible-lint autodetection mode.
-          # See https://ansible-lint.readthedocs.io/usage for details
-          ${LINTER_COMMAND} 2>&1
-        )
-      ####################################
-      # Corner case for pwsh subshell    #
-      #  - PowerShell (PSScriptAnalyzer) #
-      #  - ARM        (arm-ttk)          #
-      ####################################
-      elif [[ ${FILE_TYPE} == "POWERSHELL" ]] || [[ ${FILE_TYPE} == "ARM" ]]; then
-        ################################
-        # Lint the file with the rules #
-        ################################
-        # Need to run PowerShell commands using pwsh -c, also exit with exit code from inner subshell
-        LINT_CMD=$(
-          cd "${WORKSPACE_PATH}" || exit
-          pwsh -NoProfile -NoLogo -Command "${LINTER_COMMAND} \"${FILE}\"; if (\${Error}.Count) { exit 1 }"
-          exit $? 2>&1
-        )
-      ::
-      # Corner case for R as we have to pass it to R                                #
-      ::
-      elif [[ ${FILE_TYPE} == "R" ]]; then
-        #######################################
-        # Lint the file with the updated path #
-        #######################################
-        if [ ! -f "${DIR_NAME}/.lintr" ]; then
-          r_dir="${WORKSPACE_PATH}"
-        else
-          r_dir="${DIR_NAME}"
-        fi
-        LINT_CMD=$(
-          cd "$r_dir" || exit
-          R --slave -e "lints <- lintr::lint('$FILE');print(lints);errors <- purrr::keep(lints, ~ .\$type == 'error');quit(save = 'no', status = if (length(errors) > 0) 1 else 0)" 2>&1
-        )
-      #########################################################
-      # Corner case for C# as it writes to tty and not stdout #
-      #########################################################
-      elif [[ ${FILE_TYPE} == "CSHARP" ]]; then
-        LINT_CMD=$(
-          cd "${DIR_NAME}" || exit
-          ${LINTER_COMMAND} "${FILE_NAME}" | tee /dev/tty2 2>&1
-          exit "${PIPESTATUS[0]}"
-        )
-      #######################################################
-      # Corner case for KTLINT as it cant use the full path #
-      #######################################################
-      elif [[ ${FILE_TYPE} == "KOTLIN" ]]; then
-        LINT_CMD=$(
-          cd "${DIR_NAME}" || exit
-          ${LINTER_COMMAND} "${FILE_NAME}" 2>&1
-        )
-      ######################
-      # Check for Renovate #
-      ######################
-      elif [[ ${FILE_TYPE} == "RENOVATE" ]]; then
-        LINT_CMD=$(
-          cd "${WORKSPACE_PATH}" || exit
-          RENOVATE_CONFIG_FILE="${FILE}" ${LINTER_COMMAND} 2>&1
-        )
-      ##
-      # Corner case for TERRAFORM_TFLINT as it cant use the full path and needs to fetch modules #
-      ##
-      elif [[ ${FILE_TYPE} == "TERRAFORM_TFLINT" ]]; then
-        # Check the cache to see if we've already prepped this directory for tflint
-        if [[ ! -v "TFLINT_SEEN_DIRS[${DIR_NAME}]" ]]; then
-          debug "  Setting up TERRAFORM_TFLINT cache for ${DIR_NAME}"
-
-          TF_DOT_DIR="${DIR_NAME}/.terraform"
-          if [ -d "${TF_DOT_DIR}" ]; then
-            # Just in case there's something in the .terraform folder, keep a copy of it
-            TF_BACKUP_DIR="/tmp/.terraform-tflint-backup${DIR_NAME}"
-            debug "  Backing up ${TF_DOT_DIR} to ${TF_BACKUP_DIR}"
-
-            mkdir -p "${TF_BACKUP_DIR}"
-            cp -r "${TF_DOT_DIR}" "${TF_BACKUP_DIR}"
-            # Store the destination directory so we can restore from our copy later
-            TFLINT_SEEN_DIRS[${DIR_NAME}]="${TF_BACKUP_DIR}"
-          else
-            # Just let the cache know we've seen this before
-            TFLINT_SEEN_DIRS[${DIR_NAME}]='false'
-          fi
-
-          (
-            cd "${DIR_NAME}" || exit
-            terraform get >/dev/null
-          )
-        fi
-
-        LINT_CMD=$(
-          cd "${DIR_NAME}" || exit
-          ${LINTER_COMMAND} --filter="${FILE_NAME}" 2>&1
-        )
+      if [[ "${FIX_MODE_TEST_CASE_RUN}" == "true" ]]; then
+        debug "Don't fail the test even if VALIDATE_${FILE_TYPE} is set to ${VALIDATE_LANGUAGE} because ${FILE_TYPE} might not support fix mode"
+        return 0
       else
-        ################################
-        # Lint the file with the rules #
-        ################################
-        LINT_CMD=$(
-          cd "${WORKSPACE_PATH}" || exit
-          ${LINTER_COMMAND} "${FILE}" 2>&1
-        )
+        fatal "Don't disable any validation when running in test mode. VALIDATE_${FILE_TYPE} is set to: ${VALIDATE_LANGUAGE}. Set it to: true"
       fi
-      #######################
-      # Load the error code #
-      #######################
-      ERROR_CODE=$?
-
-      ########################################
-      # Check for if it was supposed to pass #
-      ########################################
-      if [[ ${FILE_STATUS} == "good" ]]; then
-        # Increase the good test cases count
-        (("GOOD_TEST_CASES_COUNT++"))
-
-        ##############################
-        # Check the shell for errors #
-        ##############################
-        if [ ${ERROR_CODE} -ne 0 ]; then
-          debug "Found errors. Error code: ${ERROR_CODE}, File type: ${FILE_TYPE}, Error on missing exec bit: ${ERROR_ON_MISSING_EXEC_BIT}"
-          if [[ ${FILE_TYPE} == "BASH_EXEC" ]] && [[ "${ERROR_ON_MISSING_EXEC_BIT}" == "false" ]]; then
-            ########
-            # WARN #
-            ########
-            warn "Warnings found in [${LINTER_NAME}] linter!"
-            warn "${LINT_CMD}"
-          else
-            #########
-            # Error #
-            #########
-            error "Found errors in [${LINTER_NAME}] linter!"
-            error "Error code: ${ERROR_CODE}. Command output:${NC}\n------\n${LINT_CMD}\n------"
-            # Increment the error count
-            (("ERRORS_FOUND_${FILE_TYPE}++"))
-          fi
-        else
-          ###########
-          # Success #
-          ###########
-          info " - File:${F[W]}[${FILE_NAME}]${F[B]} was linted with ${F[W]}[${LINTER_NAME}]${F[B]} successfully"
-          if [ -n "${LINT_CMD}" ]; then
-            info "   - Command output:${NC}\n------\n${LINT_CMD}\n------"
-          fi
-        fi
-      else
-        #######################################
-        # File status = bad, this should fail #
-        #######################################
-
-        # Increase the bad test cases count
-        (("BAD_TEST_CASES_COUNT++"))
-
-        ##############################
-        # Check the shell for errors #
-        ##############################
-        if [ ${ERROR_CODE} -eq 0 ]; then
-          #########
-          # Error #
-          #########
-          error "Found errors in [${LINTER_NAME}] linter!"
-          error "This file should have failed test case!"
-          error "Error code: ${ERROR_CODE}. Command output:${NC}\n------\n${LINT_CMD}\n------"
-          # Increment the error count
-          (("ERRORS_FOUND_${FILE_TYPE}++"))
-        else
-          ###########
-          # Success #
-          ###########
-          info " - File:${F[W]}[${FILE_NAME}]${F[B]} failed test case (Error code: ${ERROR_CODE}) with ${F[W]}[${LINTER_NAME}]${F[B]} successfully"
-        fi
-      fi
-      debug "Error code: ${ERROR_CODE}. Command output:${NC}\n------\n${LINT_CMD}\n------"
-    done
+    fi
   fi
 
-  # Clean up after TFLINT
-  for TF_DIR in "${!TFLINT_SEEN_DIRS[@]}"; do
-    (
-      cd "${TF_DIR}" || exit
-      rm -rf .terraform
+  debug "Running LintCodebase. FILE_TYPE: ${FILE_TYPE}. TEST_CASE_RUN: ${TEST_CASE_RUN}"
 
-      # Check to see if there was a .terraform folder there before we got started, restore it if so
-      POTENTIAL_BACKUP_DIR="${TFLINT_SEEN_DIRS[${TF_DIR}]}"
-      if [[ "${POTENTIAL_BACKUP_DIR}" != 'false' ]]; then
-        # Put the copy back in place
-        debug "  Restoring ${TF_DIR}/.terraform from ${POTENTIAL_BACKUP_DIR}"
-        mv "${POTENTIAL_BACKUP_DIR}/.terraform" .terraform
+  debug "VALIDATE_LANGUAGE for ${FILE_TYPE}: ${VALIDATE_LANGUAGE}..."
+
+  ValidateBooleanVariable "TEST_CASE_RUN" "${TEST_CASE_RUN}"
+  ValidateBooleanVariable "VALIDATE_${FILE_TYPE}" "${VALIDATE_LANGUAGE}"
+
+  unset -n VALIDATE_LANGUAGE
+
+  debug "Populating file array for ${FILE_TYPE}"
+  local -n FILE_ARRAY="FILE_ARRAY_${FILE_TYPE}"
+  local FILE_ARRAY_LANGUAGE_PATH="${FILE_ARRAYS_DIRECTORY_PATH}/file-array-${FILE_TYPE}"
+  if [[ -e "${FILE_ARRAY_LANGUAGE_PATH}" ]]; then
+    FILE_ARRAY=()
+    while read -r FILE; do
+      if [[ "${TEST_CASE_RUN}" == "true" ]]; then
+        debug "Ensure that the list files to check for ${FILE_TYPE} doesn't include test cases for other languages"
+        # Folder for specific tests. By convention, the last part of the path is the lowercased FILE_TYPE
+        local TEST_CASE_DIRECTORY
+        TEST_CASE_DIRECTORY="${FILE_TYPE,,}"
+
+        # We use configuration files to pass the list of files to lint to checkov
+        # Their name includes "checkov", which is equal to FILE_TYPE for Checkov.
+        # In this case, we don't add a trailing slash so we don't fail validation.
+        if [[ "${FILE_TYPE}" != "CHECKOV" ]]; then
+          TEST_CASE_DIRECTORY="${TEST_CASE_DIRECTORY}/"
+          debug "Adding a traling slash to the test case directory for ${FILE_TYPE}: ${TEST_CASE_DIRECTORY}"
+        fi
+
+        debug "TEST_CASE_DIRECTORY for ${FILE_TYPE}: ${TEST_CASE_DIRECTORY}"
+        if [[ ${FILE} != *"${TEST_CASE_DIRECTORY}"* ]]; then
+          debug "Excluding ${FILE} because it's not in the test case directory for ${FILE_TYPE}..."
+          continue
+        else
+          debug "Including ${FILE} because it's a test case for ${FILE_TYPE}"
+        fi
       fi
-    )
-  done
-
-  if [ "${TEST_CASE_RUN}" = "true" ]; then
-
-    debug "The ${LINTER_NAME} (linter: ${LINTER_NAME}) test suite has ${INDEX} test, of which ${BAD_TEST_CASES_COUNT} 'bad' (supposed to fail), ${GOOD_TEST_CASES_COUNT} 'good' (supposed to pass)."
-
-    # Check if we ran at least one test
-    if [ "${INDEX}" -eq 0 ]; then
-      error "Failed to find any tests ran for the Linter:[${LINTER_NAME}]!"
-      fatal "Validate logic and that tests exist for linter: ${LINTER_NAME}"
-    fi
-
-    # Check if we ran 'bad' tests
-    if [ "${BAD_TEST_CASES_COUNT}" -eq 0 ]; then
-      if [ "${FILE_TYPE}" = "ANSIBLE" ]; then
-        debug "There are no 'bad' tests for ${FILE_TYPE}, but it's a corner case that we allow because ${LINTER_NAME} is supposed to lint entire directories and the test suite doesn't support this corner case for 'bad' tests yet."
-      else
-        error "Failed to find any tests that are expected to fail for the Linter:[${LINTER_NAME}]!"
-        fatal "Validate logic and that tests that are expected to fail exist for linter: ${LINTER_NAME}"
-      fi
-    fi
-
-    # Check if we ran 'good' tests
-    if [ "${GOOD_TEST_CASES_COUNT}" -eq 0 ]; then
-      error "Failed to find any tests that are expected to pass for the Linter:[${LINTER_NAME}]!"
-      fatal "Validate logic and that tests that are expected to pass exist for linter: ${LINTER_NAME}"
-    fi
+      FILE_ARRAY+=("${FILE}")
+    done <"${FILE_ARRAY_LANGUAGE_PATH}"
+  else
+    debug "${FILE_ARRAY_LANGUAGE_PATH} doesn't exist. Skip loading the list of files and directories to lint for ${FILE_TYPE}"
   fi
+
+  if [[ "${#FILE_ARRAY[@]}" -eq 0 ]]; then
+    if [[ "${TEST_CASE_RUN}" == "false" ]]; then
+      debug "There are no items to lint for ${FILE_TYPE}"
+      unset -n FILE_ARRAY
+      return 0
+    else
+      fatal "Cannot find any tests for ${FILE_TYPE}"
+    fi
+  else
+    debug "There are ${#FILE_ARRAY[@]} items to lint for ${FILE_TYPE}: ${FILE_ARRAY[*]}"
+  fi
+
+  startGitHubActionsLogGroup "${FILE_TYPE}"
+
+  info "Linting ${FILE_TYPE} items..."
+
+  local PARALLEL_RESULTS_FILE_PATH
+  PARALLEL_RESULTS_FILE_PATH="${AWESOME_LINTER_PRIVATE_OUTPUT_DIRECTORY_PATH}/awesome-linter-worker-results-${FILE_TYPE}.json"
+  debug "PARALLEL_RESULTS_FILE_PATH for ${FILE_TYPE}: ${PARALLEL_RESULTS_FILE_PATH}"
+
+  local -a PARALLEL_COMMAND
+  PARALLEL_COMMAND=(parallel --will-cite --keep-order --max-procs "$(($(nproc) * 1))" --xargs --results "${PARALLEL_RESULTS_FILE_PATH}")
+
+  if [ "${LOG_DEBUG}" == "true" ]; then
+    debug "LOG_DEBUG is enabled. Enable verbose ouput for parallel"
+    PARALLEL_COMMAND+=(--verbose)
+  fi
+  debug "PARALLEL_COMMAND for ${FILE_TYPE}: ${PARALLEL_COMMAND[*]}"
+
+  # The following linters support linting one file at a time, and don't support linting a list of files,
+  # so we cannot pass more than one file per invocation
+  if [[ "${FILE_TYPE}" == "ANSIBLE" ]] ||
+    [[ "${FILE_TYPE}" == "ARM" ]] ||
+    [[ "${FILE_TYPE}" == "BASH_EXEC" ]] ||
+    [[ "${FILE_TYPE}" == "CLOJURE" ]] ||
+    [[ "${FILE_TYPE}" == "CSHARP" ]] ||
+    [[ "${FILE_TYPE}" == "DOTNET_SLN_FORMAT_ANALYZERS" ]] ||
+    [[ "${FILE_TYPE}" == "DOTNET_SLN_FORMAT_STYLE" ]] ||
+    [[ "${FILE_TYPE}" == "DOTNET_SLN_FORMAT_WHITESPACE" ]] ||
+    [[ "${FILE_TYPE}" == "GITLEAKS" ]] ||
+    [[ "${FILE_TYPE}" == "GO_MODULES" ]] ||
+    [[ "${FILE_TYPE}" == "JSCPD" ]] ||
+    [[ "${FILE_TYPE}" == "KOTLIN" ]] ||
+    [[ "${FILE_TYPE}" == "SQLFLUFF" ]] ||
+    [[ "${FILE_TYPE}" == "CHECKOV" ]] ||
+    [[ "${FILE_TYPE}" == "POWERSHELL" ]] ||
+    [[ "${FILE_TYPE}" == "R" ]] ||
+    [[ "${FILE_TYPE}" == "RUST_CLIPPY" ]] ||
+    [[ "${FILE_TYPE}" == "SNAKEMAKE_LINT" ]] ||
+    [[ "${FILE_TYPE}" == "STATES" ]] ||
+    [[ "${FILE_TYPE}" == "TERRAFORM_TFLINT" ]] ||
+    [[ "${FILE_TYPE}" == "TERRAFORM_TERRASCAN" ]] ||
+    [[ "${FILE_TYPE}" == "TERRAGRUNT" ]]; then
+    debug "${FILE_TYPE} doesn't support linting files in batches. Configure the linter to run over the files to lint one by one"
+    PARALLEL_COMMAND+=(--max-lines 1)
+  fi
+  debug "PARALLEL_COMMAND for ${FILE_TYPE} after updating the number of files to lint per process: ${PARALLEL_COMMAND[*]}"
+
+  local LINTER_WORKING_DIRECTORY
+  LINTER_WORKING_DIRECTORY="${GITHUB_WORKSPACE}"
+
+  # GNU parallel parameter expansion:
+  # - {} input item
+  # - {/} basename of the input lint
+  # - {//} dirname of input line
+
+  if [[ ${FILE_TYPE} == "CSHARP" ]] ||
+    [[ (${FILE_TYPE} == "R" && -f "$(dirname "${FILE}")/.lintr") ]] ||
+    [[ ${FILE_TYPE} == "KOTLIN" ]] ||
+    [[ ${FILE_TYPE} == "RUST_CLIPPY" ]] ||
+    [[ ${FILE_TYPE} == "TERRAFORM_TFLINT" ]]; then
+    LINTER_WORKING_DIRECTORY="{//}"
+  elif [[ ${FILE_TYPE} == "ANSIBLE" ]] ||
+    [[ ${FILE_TYPE} == "GO_MODULES" ]]; then
+    LINTER_WORKING_DIRECTORY="{}"
+  fi
+
+  debug "LINTER_WORKING_DIRECTORY for ${FILE_TYPE}: ${LINTER_WORKING_DIRECTORY}"
+  PARALLEL_COMMAND+=(--workdir "${LINTER_WORKING_DIRECTORY}")
+  debug "PARALLEL_COMMAND for ${FILE_TYPE} after updating the working directory: ${PARALLEL_COMMAND[*]}"
+
+  # shellcheck source=/dev/null
+  source /action/lib/functions/linterCommands.sh
+  # Dynamically add arguments and commands to each linter command as needed
+  if ! InitFixModeOptionsAndCommands "${FILE_TYPE}"; then
+    fatal "Error while inizializing fix mode and check only options and commands before running linter for ${FILE_TYPE}"
+  fi
+  InitInputConsumeCommands
+
+  if [[ "${FILE_TYPE}" == "POWERSHELL" ]]; then
+    debug "Language: ${FILE_TYPE}. Initialize PowerShell command"
+    InitPowerShellCommand
+  fi
+
+  local -n LINTER_COMMAND_ARRAY
+  LINTER_COMMAND_ARRAY="LINTER_COMMANDS_ARRAY_${FILE_TYPE}"
+  if [ ${#LINTER_COMMAND_ARRAY[@]} -eq 0 ]; then
+    fatal "LINTER_COMMAND_ARRAY for ${FILE_TYPE} is empty."
+  else
+    debug "LINTER_COMMAND_ARRAY for ${FILE_TYPE} has ${#LINTER_COMMAND_ARRAY[@]} elements: ${LINTER_COMMAND_ARRAY[*]}"
+  fi
+
+  PARALLEL_COMMAND+=("${LINTER_COMMAND_ARRAY[@]}")
+  debug "PARALLEL_COMMAND for ${FILE_TYPE} after LINTER_COMMAND_ARRAY concatenation: ${PARALLEL_COMMAND[*]}"
+
+  unset -n LINTER_COMMAND_ARRAY
+
+  local PARALLEL_COMMAND_OUTPUT
+  local PARALLEL_COMMAND_RETURN_CODE
+  PARALLEL_COMMAND_OUTPUT=$(printf "%s\n" "${FILE_ARRAY[@]}" | "${PARALLEL_COMMAND[@]}" 2>&1)
+  # Don't check for errors on this return code because commands can fail if linter report errors
+  PARALLEL_COMMAND_RETURN_CODE=$?
+  debug "PARALLEL_COMMAND_OUTPUT for ${FILE_TYPE} (exit code: ${PARALLEL_COMMAND_RETURN_CODE}): ${PARALLEL_COMMAND_OUTPUT}"
+  debug "Parallel output file (${PARALLEL_RESULTS_FILE_PATH}) contents for ${FILE_TYPE}:\n$(cat "${PARALLEL_RESULTS_FILE_PATH}")"
+
+  echo ${PARALLEL_COMMAND_RETURN_CODE} >"${AWESOME_LINTER_PRIVATE_OUTPUT_DIRECTORY_PATH}/awesome-linter-parallel-command-exit-code-${FILE_TYPE}"
+
+  if [ ${PARALLEL_COMMAND_RETURN_CODE} -ne 0 ]; then
+    error "Found errors when linting ${FILE_TYPE}. Exit code: ${PARALLEL_COMMAND_RETURN_CODE}."
+  else
+    notice "${FILE_TYPE} linted successfully"
+  fi
+
+  local RESULTS_OBJECT
+  RESULTS_OBJECT=
+  if ! RESULTS_OBJECT=$(jq --raw-output -n '[inputs]' "${PARALLEL_RESULTS_FILE_PATH}"); then
+    fatal "Error loading results for ${FILE_TYPE}: ${RESULTS_OBJECT}"
+  fi
+  debug "RESULTS_OBJECT for ${FILE_TYPE}:\n${RESULTS_OBJECT}"
+
+  # To count how many files were checked for a given FILE_TYPE
+  local INDEX
+  INDEX=0
+  if ! ((INDEX = $(jq '[.[] | .V | length] | add' <<<"${RESULTS_OBJECT}"))); then
+    fatal "Error when setting INDEX for ${FILE_TYPE}: ${INDEX}"
+  fi
+  debug "Set INDEX for ${FILE_TYPE} to: ${INDEX}"
+
+  local STDOUT_LINTER
+  # Get raw output so we can strip quotes from the data we load. Also, strip the final newline to avoid adding it two times
+  if ! STDOUT_LINTER="$(jq --raw-output '.[] | select(.Stdout[:-1] | length > 0) | .Stdout[:-1]' <<<"${RESULTS_OBJECT}")"; then
+    fatal "Error when loading stdout for ${FILE_TYPE}:\n${STDOUT_LINTER}"
+  fi
+
+  # Load output functions because we might need to process stdout and stderr
+  # shellcheck source=/dev/null
+  source /action/lib/functions/output.sh
+
+  if [ -n "${STDOUT_LINTER}" ]; then
+    info "Command output for ${FILE_TYPE}:\n------\n${STDOUT_LINTER}\n------"
+
+    local STDOUT_LINTER_FILE_PATH
+    STDOUT_LINTER_FILE_PATH="${AWESOME_LINTER_PRIVATE_OUTPUT_DIRECTORY_PATH}/awesome-linter-parallel-stdout-${FILE_TYPE}"
+    debug "Saving stdout for ${FILE_TYPE} to ${STDOUT_LINTER_FILE_PATH} in case we need it later"
+    printf '%s\n' "${STDOUT_LINTER}" >"${STDOUT_LINTER_FILE_PATH}"
+    if [[ "${REMOVE_ANSI_COLOR_CODES_FROM_OUTPUT}" == "true" ]] &&
+      ! RemoveAnsiColorCodesFromFile "${STDOUT_LINTER_FILE_PATH}"; then
+      fatal "Error while removing ANSI color codes from ${STDOUT_LINTER_FILE_PATH}"
+    fi
+  else
+    debug "Stdout for ${FILE_TYPE} is empty"
+  fi
+
+  local STDERR_LINTER
+  if ! STDERR_LINTER="$(jq --raw-output '.[] | select(.Stderr[:-1] | length > 0) | .Stderr[:-1]' <<<"${RESULTS_OBJECT}")"; then
+    fatal "Error when loading stderr for ${FILE_TYPE}:\n${STDERR_LINTER}"
+  fi
+
+  if [ -n "${STDERR_LINTER}" ]; then
+    info "Stderr contents for ${FILE_TYPE}:\n------\n${STDERR_LINTER}\n------"
+
+    local STDERR_LINTER_FILE_PATH
+    STDERR_LINTER_FILE_PATH="${AWESOME_LINTER_PRIVATE_OUTPUT_DIRECTORY_PATH}/awesome-linter-parallel-stderr-${FILE_TYPE}"
+    debug "Saving stderr for ${FILE_TYPE} to ${STDERR_LINTER_FILE_PATH} in case we need it later"
+    printf '%s\n' "${STDERR_LINTER}" >"${STDERR_LINTER_FILE_PATH}"
+    if [[ "${REMOVE_ANSI_COLOR_CODES_FROM_OUTPUT}" == "true" ]] &&
+      ! RemoveAnsiColorCodesFromFile "${STDERR_LINTER_FILE_PATH}"; then
+      fatal "Error while removing ANSI color codes from ${STDERR_LINTER_FILE_PATH}"
+    fi
+  else
+    debug "Stderr for ${FILE_TYPE} is empty"
+  fi
+
+  unset -n FILE_ARRAY
+
+  endGitHubActionsLogGroup "${FILE_TYPE}"
 }
+
+# We need this for parallel
+export -f LintCodebase
