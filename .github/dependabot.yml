@@ -47,7 +47,7 @@ updates:
   - package-ecosystem: "pip"
     commit-message:
       prefix: "deps(python)"
-    directory: "/dependencies/python/"
+    directory: "/ci-tools/python/"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 100
