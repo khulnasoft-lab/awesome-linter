@@ -1,0 +1,12 @@
+---
+name: "Awesome-Linter slim"
+author: "Awesome-linter contributors"
+description: "Awesome-linter is a ready-to-run collection of linters and code analyzers, to help validate your source code."
+runs:
+  using: "docker"
+  image: "docker://ghcr.io/khulnasoft-lab/awesome-linter:slim-v7.1.0" # x-release-please-version
+branding:
+  icon: "check-square"
+  color: "white"
+# You can view https://github.com/khulnasoft-lab/awesome-linter#environment-variables
+# to see a comprehensive list of all environment variables that can be passed

@@ -318,7 +318,7 @@ jobs:
         run: exit 1
 
   preview-release-notes:
-    if: github.event_name == 'pull_request' && github.repository == github.event.pull_request.head.repo.full_name && github.repository == 'awesome-linter/awesome-linter'
+    if: github.event_name == 'pull_request' && github.repository == github.event.pull_request.head.repo.full_name && github.repository == 'khulnasoft-lab/awesome-linter'
     runs-on: ubuntu-latest
     permissions:
       contents: read
