@@ -1,32 +1,48 @@
 {
-  "name": "awesome-linter",
+  "$schema": "https://raw.githubusercontent.com/devcontainers/spec/main/schemas/devContainer.schema.json",
+  "name": "Awesome-Linter",
   "image": "ghcr.io/khulnasoft-lab/awesome-linter:latest",
   "customizations": {
     "vscode": {
       "settings": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode",
         "editor.formatOnSave": true,
         "editor.formatOnSaveMode": "file",
         "editor.wordWrap": "off",
+        "hadolint.cliOptions": [
+          "--config",
+          "/workspaces/awesome-linter/.github/linters/.hadolint.yaml"
+        ],
+        "markdownlint.config": {
+          "extends": "${workspaceFolder}/.github/linters/.markdown-lint.yml"
+        },
         "prettier.resolveGlobalModules": true,
+        "redhat.telemetry.enabled": false,
+        "telemetry.telemetryLevel": "off",
+        "[javascript]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[json]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[jsonc]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
         "[markdown]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
           "editor.wordWrap": "off"
         },
         "[shellscript]": {
           "editor.defaultFormatter": "mkhl.shfmt"
         },
-        "[terraform]": {
-          "editor.defaultFormatter": "hashicorp.terraform"
-        },
-        "[terraform-vars]": {
-          "editor.defaultFormatter": "hashicorp.terraform"
+        "[yaml]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
         }
       },
       "extensions": [
         "DavidAnson.vscode-markdownlint",
         "EditorConfig.EditorConfig",
-        "HashiCorp.terraform",
         "esbenp.prettier-vscode",
+        "exiasr.hadolint",
         "GitHub.vscode-github-actions",
         "GitHub.vscode-pull-request-github",
         "mads-hartmann.bash-ide-vscode",
@@ -49,23 +65,33 @@
       "type": "bind"
     },
     {
-      "source": "${localWorkspaceFolder}/dependencies/Gemfile",
+      "source": "${localWorkspaceFolder}/ci-tools/Gemfile",
       "target": "/Gemfile",
       "type": "bind"
     },
     {
-      "source": "${localWorkspaceFolder}/dependencies/Gemfile.lock",
+      "source": "${localWorkspaceFolder}/ci-tools/Gemfile.lock",
       "target": "/Gemfile.lock",
       "type": "bind"
     },
     {
-      "source": "${localWorkspaceFolder}/dependencies/package.json",
+      "source": "${localWorkspaceFolder}/ci-tools/package.json",
       "target": "/package.json",
       "type": "bind"
     },
     {
-      "source": "${localWorkspaceFolder}/dependencies/package-lock.json",
+      "source": "${localWorkspaceFolder}/ci-tools/package-lock.json",
       "target": "/package-lock.json",
+      "type": "bind"
+    },
+    {
+      "source": "${localWorkspaceFolder}/ci-tools/composer/composer.json",
+      "target": "/php-composer/composer.json",
+      "type": "bind"
+    },
+    {
+      "source": "${localWorkspaceFolder}/ci-tools/composer/composer.lock",
+      "target": "/php-composer/composer.lock",
       "type": "bind"
     },
     {
@@ -79,5 +105,5 @@
       "type": "bind"
     }
   ],
-  "runArgs": ["--env-file", ".devcontainer/devcontainer.env"]
+  "runArgs": ["--env-file", ".devcontainer/devcontainer.env", "--rm"]
 }
