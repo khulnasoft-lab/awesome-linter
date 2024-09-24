@@ -1,5 +1,5 @@
 ---
-name: "Super-Linter"
+name: "Awesome-Linter"
 author: "Awesome-linter contributors"
 description: "Awesome-linter is a ready-to-run collection of linters and code analyzers, to help validate your source code."
 runs:
