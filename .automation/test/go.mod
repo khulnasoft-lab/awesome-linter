@@ -2,7 +2,7 @@ module github.com/khulnasoft-lab/awesome-linter
 
 go 1.21
 
-toolchain go1.21.1
+toolchain go1.23.2
 
 require (
 	github.com/go-playground/validator/v10 v10.22.0
