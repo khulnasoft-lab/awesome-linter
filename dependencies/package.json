@@ -31,7 +31,7 @@
     "jscpd": "^4.0.5",
     "lodash": "^4.17.21",
     "markdownlint-cli": "^0.42.0",
-    "next": "^14.2.13",
+    "next": "^14.2.14",
     "next-pwa": "^5.6.0",
     "node-fetch": "^3.3.2",
     "npm-groovy-lint": "^15.0.2",
