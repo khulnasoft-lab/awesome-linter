@@ -17,7 +17,7 @@ FROM ghcr.io/yannh/kubeconform:v0.6.7 as kubeconfrm
 FROM golang:1.23.2-alpine as golang
 FROM golangci/golangci-lint:v1.61.0 as golangci-lint
 FROM hadolint/hadolint:latest-alpine as dockerfile-lint
-FROM hashicorp/terraform:1.9.6 as terraform
+FROM hashicorp/terraform:1.9.7 as terraform
 FROM koalaman/shellcheck:v0.10.0 as shellcheck
 FROM mstruebing/editorconfig-checker:v3.0.3 as editorconfig-checker
 FROM mvdan/shfmt:v3.9.0 as shfmt
