@@ -1,10 +1,10 @@
 {
     "failed_checks": [
         {
-            "file": "/dev-dependencies/Dockerfile",
+            "file": "/dev/Dockerfile",
             "findings": [
                 {
-                    "resource": "/dev-dependencies/Dockerfile.",
+                    "resource": "/dev/Dockerfile.",
                     "check_ids": [
                         "CKV_DOCKER_2"
                     ]

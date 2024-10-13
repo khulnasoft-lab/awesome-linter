@@ -37,6 +37,7 @@ build/Release
 # Dependency directories
 node_modules/
 jspm_packages/
+dependencies/composer/vendor
 
 # TypeScript v1 declaration files
 typings/
@@ -98,3 +99,6 @@ awesome-linter-output/
 custom-awesome-linter-output-directory-name/
 awesome-linter-github-actions-step-summary-output*
 github-step-summary.md
+
+# MacOS File
+.DS_Store

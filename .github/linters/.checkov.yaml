@@ -2,7 +2,7 @@
 # Options reference: https://www.checkov.io/2.Basics/CLI%20Command%20Reference.html
 
 # Establish a baseline so we don't have to fix these issues at the same time
-# as we ship Checkov with super-linter.
+# as we ship Checkov with awesome-linter.
 baseline: .github/linters/.checkov.baseline
 
 # Report skipped baseline checks in the output

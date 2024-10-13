@@ -79,7 +79,7 @@ updates:
   - package-ecosystem: "docker"
     commit-message:
       prefix: "ci(dev-docker)"
-    directory: "/dev-dependencies"
+    directory: "/dev"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 100
@@ -87,7 +87,7 @@ updates:
   - package-ecosystem: "npm"
     commit-message:
       prefix: "ci(dev-npm)"
-    directory: "/dev-dependencies"
+    directory: "/dev"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 100
