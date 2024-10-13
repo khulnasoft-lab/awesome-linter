@@ -1,0 +1,6 @@
+{
+    "absolute": true,
+    "ignore": ["**/node_modules/**"],
+    "reporters": ["consoleFull"],
+    "threshold": 0
+  }

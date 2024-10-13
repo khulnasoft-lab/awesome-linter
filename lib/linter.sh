@@ -369,8 +369,8 @@ debug "IGNORE_GENERATED_FILES: ${IGNORE_GENERATED_FILES}"
 # Default Vars #
 ################
 DEFAULT_VALIDATE_ALL_CODEBASE='true'                                        # Default value for validate all files
-DEFAULT_SUPER_LINTER_WORKSPACE="/tmp/lint"                                  # Fall-back value for the workspace
-DEFAULT_WORKSPACE="${DEFAULT_WORKSPACE:-${DEFAULT_SUPER_LINTER_WORKSPACE}}" # Default workspace if running locally
+DEFAULT_AWESOME_LINTER_WORKSPACE="/tmp/lint"                                  # Fall-back value for the workspace
+DEFAULT_WORKSPACE="${DEFAULT_WORKSPACE:-${DEFAULT_AWESOME_LINTER_WORKSPACE}}" # Default workspace if running locally
 DEFAULT_RUN_LOCAL='false'                                                   # Default value for debugging locally
 DEFAULT_TEST_CASE_RUN='false'                                               # Flag to tell code to run only test cases
 
@@ -441,7 +441,7 @@ Header() {
 
 ConfigureGitSafeDirectories() {
   debug "Configuring Git safe directories"
-  declare -a git_safe_directories=("${GITHUB_WORKSPACE}" "${DEFAULT_SUPER_LINTER_WORKSPACE}" "${DEFAULT_WORKSPACE}")
+  declare -a git_safe_directories=("${GITHUB_WORKSPACE}" "${DEFAULT_AWESOME_LINTER_WORKSPACE}" "${DEFAULT_WORKSPACE}")
   for safe_directory in "${git_safe_directories[@]}"; do
     debug "Set ${safe_directory} as a Git safe directory"
     if ! git config --global --add safe.directory "${safe_directory}"; then
