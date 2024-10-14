@@ -41,7 +41,7 @@
     "react-router-dom": "^6.26.2",
     "renovate": "^38.55.1",
     "standard": "^17.1.2",
-    "stylelint": "^15.11.0",
+    "stylelint": "^16.0.0",
     "stylelint-config-recommended-scss": "^13.0.0",
     "stylelint-config-sass-guidelines": "^10.0.0",
     "stylelint-config-standard": "^34.0.0",
