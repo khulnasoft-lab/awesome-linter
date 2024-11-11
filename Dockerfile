@@ -13,7 +13,7 @@ FROM dotenvlinter/dotenv-linter:3.3.0 AS dotenv-linter
 FROM ghcr.io/terraform-linters/tflint:v0.53.0 AS tflint
 FROM ghcr.io/yannh/kubeconform:v0.6.7 AS kubeconfrm
 FROM alpine/helm:3.16.2 AS helm
-FROM golang:1.23.2-alpine AS golang
+FROM golang:1.23.3-alpine AS golang
 FROM golangci/golangci-lint:v1.61.0 AS golangci-lint
 FROM goreleaser/goreleaser:v2.4.2 AS goreleaser
 FROM hadolint/hadolint:v2.12.0-alpine AS dockerfile-lint
