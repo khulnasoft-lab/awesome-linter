@@ -76,7 +76,7 @@ GEM
       rubocop-rspec (~> 3, >= 3.0.1)
     ruby-progressbar (1.13.0)
     securerandom (0.3.2)
-    standard (1.42.0)
+    standard (1.42.1)
       language_server-protocol (~> 3.17.0.2)
       lint_roller (~> 1.0)
       rubocop (~> 1.68.0)
@@ -111,4 +111,4 @@ DEPENDENCIES
   standard (~> 1.41)
 
 BUNDLED WITH
-  2.5.9
+   2.5.9
