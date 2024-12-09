@@ -2,7 +2,7 @@
   "name": "awesome-linter",
   "dependencies": {
     "@babel/eslint-parser": "^7.25.9",
-    "@babel/preset-react": "^7.25.9",
+    "@babel/preset-react": "^7.26.3",
     "@babel/preset-typescript": "^7.26.0",
     "@coffeelint/cli": "^5.2.11",
     "@commitlint/config-conventional": "^19.6.0",
