@@ -28,7 +28,7 @@ FROM zricethezav/gitleaks:v8.21.2 AS gitleaks
 FROM yoheimuta/protolint:0.51.0 AS protolint
 FROM ghcr.io/clj-kondo/clj-kondo:2024.11.14-alpine AS clj-kondo
 FROM dart:3.5.4-sdk AS dart
-FROM mcr.microsoft.com/dotnet/sdk:9.0.100-alpine3.20 AS dotnet-sdk
+FROM mcr.microsoft.com/dotnet/sdk:9.0.101-alpine3.20 AS dotnet-sdk
 FROM mcr.microsoft.com/powershell:7.4-alpine-3.20 AS powershell
 FROM composer/composer:2.8.3 AS php-composer
 
