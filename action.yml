@@ -4,7 +4,7 @@ author: "Awesome-linter contributors"
 description: "Awesome-linter is a ready-to-run collection of linters and code analyzers, to help validate your source code."
 runs:
   using: "docker"
-  image: "docker://ghcr.io/khulnasoft-lab/awesome-linter:v7.1.0" # x-release-please-version
+  image: "docker://ghcr.io/khulnasoft-lab/awesome-linter:v7.2.1" # x-release-please-version
 branding:
   icon: "check-square"
   color: "white"
