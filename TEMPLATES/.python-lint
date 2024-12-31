@@ -5,7 +5,7 @@ jobs=0
 
 [MESSAGES CONTROL]
 
-# Ignoring Import Errors is desired as super-linter
+# Ignoring Import Errors is desired as awesome-linter
 # does not support installing dependencies as it runs
 disable=import-error
 

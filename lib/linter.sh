@@ -1,54 +1,24 @@
 #!/usr/bin/env bash
 
-##################################################################
-# Debug Vars                                                     #
-# Define these early, so we can use debug logging ASAP if needed #
-##################################################################
-ACTIONS_RUNNER_DEBUG="${ACTIONS_RUNNER_DEBUG:-false}" # Boolean to see even more info (debug)
-IMAGE="${IMAGE:-standard}"                            # Version of the Awesome-linter (standard,slim,etc)
+set -o nounset
+set -o pipefail
 
-##################################################################
-# Log Vars                                                       #
-# Define these early, so we can use debug logging ASAP if needed #
-##################################################################
-LOG_FILE="${LOG_FILE:-"awesome-linter.log"}" # Default log file name (located in GITHUB_WORKSPACE folder)
-LOG_LEVEL="${LOG_LEVEL:-VERBOSE}"          # Default log level (VERBOSE, DEBUG, TRACE)
-CREATE_LOG_FILE="${CREATE_LOG_FILE:-"false"}"
-export CREATE_LOG_FILE
-
-if [[ ${ACTIONS_RUNNER_DEBUG} == true ]]; then LOG_LEVEL="DEBUG"; fi
-# Boolean to see trace logs
-LOG_TRACE=$(if [[ ${LOG_LEVEL} == "TRACE" ]]; then echo "true"; fi)
-export LOG_TRACE
-# Boolean to see debug logs
-LOG_DEBUG=$(if [[ ${LOG_LEVEL} == "DEBUG" || ${LOG_LEVEL} == "TRACE" ]]; then echo "true"; fi)
-export LOG_DEBUG
-# Boolean to see verbose logs (info function)
-LOG_VERBOSE=$(if [[ ${LOG_LEVEL} == "VERBOSE" || ${LOG_LEVEL} == "DEBUG" || ${LOG_LEVEL} == "TRACE" ]]; then echo "true"; fi)
-export LOG_VERBOSE
-# Boolean to see notice logs
-LOG_NOTICE=$(if [[ ${LOG_LEVEL} == "NOTICE" || ${LOG_LEVEL} == "VERBOSE" || ${LOG_LEVEL} == "DEBUG" || ${LOG_LEVEL} == "TRACE" ]]; then echo "true"; fi)
-export LOG_NOTICE
-# Boolean to see warn logs
-LOG_WARN=$(if [[ ${LOG_LEVEL} == "WARN" || ${LOG_LEVEL} == "NOTICE" || ${LOG_LEVEL} == "VERBOSE" || ${LOG_LEVEL} == "DEBUG" || ${LOG_LEVEL} == "TRACE" ]]; then echo "true"; fi)
-export LOG_WARN
-# Boolean to see error logs
-LOG_ERROR=$(if [[ ${LOG_LEVEL} == "ERROR" || ${LOG_LEVEL} == "WARN" || ${LOG_LEVEL} == "NOTICE" || ${LOG_LEVEL} == "VERBOSE" || ${LOG_LEVEL} == "DEBUG" || ${LOG_LEVEL} == "TRACE" ]]; then echo "true"; fi)
-export LOG_ERROR
+# Version of the Awesome-linter (standard,slim,etc)
+IMAGE="${IMAGE:-standard}"
 
 #########################
 # Source Function Files #
 #########################
+# Source log functions and variables early so we can use them ASAP
+# shellcheck source=/dev/null
+source /action/lib/functions/log.sh # Source the function script(s)
+
 # shellcheck source=/dev/null
 source /action/lib/functions/buildFileList.sh # Source the function script(s)
 # shellcheck source=/dev/null
 source /action/lib/functions/detectFiles.sh # Source the function script(s)
 # shellcheck source=/dev/null
 source /action/lib/functions/linterRules.sh # Source the function script(s)
-# shellcheck source=/dev/null
-source /action/lib/functions/linterVersions.sh # Source the function script(s)
-# shellcheck source=/dev/null
-source /action/lib/functions/log.sh # Source the function script(s)
 # shellcheck source=/dev/null
 source /action/lib/functions/updateSSL.sh # Source the function script(s)
 # shellcheck source=/dev/null
@@ -58,390 +28,199 @@ source /action/lib/functions/worker.sh # Source the function script(s)
 # shellcheck source=/dev/null
 source /action/lib/functions/setupSSH.sh # Source the function script(s)
 # shellcheck source=/dev/null
-for batch_worker_script in /action/lib/functions/experimental-batch-workers/*.sh; do
-  # shellcheck source=/dev/null
-  source "$batch_worker_script"
-done
+source /action/lib/functions/githubEvent.sh
+# shellcheck source=/dev/null
+source /action/lib/functions/githubDomain.sh
+# shellcheck source=/dev/null
+source /action/lib/functions/output.sh
+
+if ! ValidateGitHubUrls; then
+  fatal "GitHub URLs failed validation"
+fi
+
+# We want a lowercase value
+declare -l RUN_LOCAL
+# Initialize RUN_LOCAL early because we need it for logging
+RUN_LOCAL="${RUN_LOCAL:-"false"}"
+
+# Dynamically set the default behavior for GitHub Actions log markers because
+# we want to give users a chance to enable this even when running locally, but
+# we still want to provide a default value in case they don't want to explictly
+# configure it.
+if [[ "${RUN_LOCAL}" == "true" ]]; then
+  DEFAULT_ENABLE_GITHUB_ACTIONS_GROUP_TITLE="false"
+  DEFAULT_ENABLE_GITHUB_ACTIONS_STEP_SUMMARY="false"
+else
+  DEFAULT_ENABLE_GITHUB_ACTIONS_GROUP_TITLE="true"
+  DEFAULT_ENABLE_GITHUB_ACTIONS_STEP_SUMMARY="true"
+fi
+# Let users configure GitHub Actions log markers regardless of running locally or not
+ENABLE_GITHUB_ACTIONS_GROUP_TITLE="${ENABLE_GITHUB_ACTIONS_GROUP_TITLE:-"${DEFAULT_ENABLE_GITHUB_ACTIONS_GROUP_TITLE}"}"
+export ENABLE_GITHUB_ACTIONS_GROUP_TITLE
+
+startGitHubActionsLogGroup "${AWESOME_LINTER_INITIALIZATION_LOG_GROUP_TITLE}"
+
+# Let users configure GitHub Actions step summary regardless of running locally or not
+ENABLE_GITHUB_ACTIONS_STEP_SUMMARY="${ENABLE_GITHUB_ACTIONS_STEP_SUMMARY:-"${DEFAULT_ENABLE_GITHUB_ACTIONS_STEP_SUMMARY}"}"
+export ENABLE_GITHUB_ACTIONS_STEP_SUMMARY
+
+# We want a lowercase value
+declare -l BASH_EXEC_IGNORE_LIBRARIES
+BASH_EXEC_IGNORE_LIBRARIES="${BASH_EXEC_IGNORE_LIBRARIES:-false}"
+
+# We want a lowercase value
+declare -l DISABLE_ERRORS
+DISABLE_ERRORS="${DISABLE_ERRORS:-"false"}"
+
+# We want a lowercase value
+declare -l IGNORE_GENERATED_FILES
+# Do not ignore generated files by default for backwards compatibility
+IGNORE_GENERATED_FILES="${IGNORE_GENERATED_FILES:-false}"
+export IGNORE_GENERATED_FILES
+
+# We want a lowercase value
+declare -l IGNORE_GITIGNORED_FILES
+IGNORE_GITIGNORED_FILES="${IGNORE_GITIGNORED_FILES:-false}"
+export IGNORE_GITIGNORED_FILES
+
+# We want a lowercase value
+declare -l MULTI_STATUS
+MULTI_STATUS="${MULTI_STATUS:-true}"
+
+# We want a lowercase value
+declare -l SAVE_AWESOME_LINTER_OUTPUT
+SAVE_AWESOME_LINTER_OUTPUT="${SAVE_AWESOME_LINTER_OUTPUT:-false}"
+
+# We want a lowercase value
+declare -l SSH_INSECURE_NO_VERIFY_GITHUB_KEY
+SSH_INSECURE_NO_VERIFY_GITHUB_KEY="${SSH_INSECURE_NO_VERIFY_GITHUB_KEY:-false}"
+
+# We want a lowercase value
+declare -l SSH_SETUP_GITHUB
+SSH_SETUP_GITHUB="${SSH_SETUP_GITHUB:-false}"
+
+# We want a lowercase value
+declare -l SUPPRESS_FILE_TYPE_WARN
+SUPPRESS_FILE_TYPE_WARN="${SUPPRESS_FILE_TYPE_WARN:-false}"
+
+# We want a lowercase value
+declare -l SUPPRESS_POSSUM
+SUPPRESS_POSSUM="${SUPPRESS_POSSUM:-false}"
+
+# We want a lowercase value
+declare -l TEST_CASE_RUN
+# Option to tell code to run only test cases
+TEST_CASE_RUN="${TEST_CASE_RUN:-"false"}"
+export TEST_CASE_RUN
+
+declare -l FIX_MODE_TEST_CASE_RUN
+FIX_MODE_TEST_CASE_RUN="${FIX_MODE_TEST_CASE_RUN:-"false"}"
+export FIX_MODE_TEST_CASE_RUN
+
+# We want a lowercase value
+declare -l USE_FIND_ALGORITHM
+USE_FIND_ALGORITHM="${USE_FIND_ALGORITHM:-false}"
+
+# We want a lowercase value
+declare -l VALIDATE_ALL_CODEBASE
+VALIDATE_ALL_CODEBASE="${VALIDATE_ALL_CODEBASE:-"true"}"
+
+# We want a lowercase value
+declare -l YAML_ERROR_ON_WARNING
+YAML_ERROR_ON_WARNING="${YAML_ERROR_ON_WARNING:-false}"
+
+# We want a lowercase value
+declare -l SAVE_AWESOME_LINTER_SUMMARY
+SAVE_AWESOME_LINTER_SUMMARY="${SAVE_AWESOME_LINTER_SUMMARY:-false}"
+
+declare -l REMOVE_ANSI_COLOR_CODES_FROM_OUTPUT
+REMOVE_ANSI_COLOR_CODES_FROM_OUTPUT="${REMOVE_ANSI_COLOR_CODES_FROM_OUTPUT:-"false"}"
+export REMOVE_ANSI_COLOR_CODES_FROM_OUTPUT
+
+declare -l ENABLE_COMMITLINT_STRICT_MODE
+ENABLE_COMMITLINT_STRICT_MODE="${ENABLE_COMMITLINT_STRICT_MODE:-"false"}"
+export ENABLE_COMMITLINT_STRICT_MODE
+
+declare -l ENFORCE_COMMITLINT_CONFIGURATION_CHECK
+ENFORCE_COMMITLINT_CONFIGURATION_CHECK="${ENFORCE_COMMITLINT_CONFIGURATION_CHECK:-"false"}"
+export ENFORCE_COMMITLINT_CONFIGURATION_CHECK
+
+# Define private output paths early because cleanup depends on those being defined
+DEFAULT_AWESOME_LINTER_OUTPUT_DIRECTORY_NAME="awesome-linter-output"
+AWESOME_LINTER_OUTPUT_DIRECTORY_NAME="${AWESOME_LINTER_OUTPUT_DIRECTORY_NAME:-${DEFAULT_AWESOME_LINTER_OUTPUT_DIRECTORY_NAME}}"
+export AWESOME_LINTER_OUTPUT_DIRECTORY_NAME
+debug "Awesome-linter main output directory name: ${AWESOME_LINTER_OUTPUT_DIRECTORY_NAME}"
+
+AWESOME_LINTER_PRIVATE_OUTPUT_DIRECTORY_PATH="/tmp/${DEFAULT_AWESOME_LINTER_OUTPUT_DIRECTORY_NAME}"
+export AWESOME_LINTER_PRIVATE_OUTPUT_DIRECTORY_PATH
+debug "Awesome-linter private output directory path: ${AWESOME_LINTER_PRIVATE_OUTPUT_DIRECTORY_PATH}"
+mkdir -p "${AWESOME_LINTER_PRIVATE_OUTPUT_DIRECTORY_PATH}"
+
+FIX_MODE_ENABLED="false"
+
+ValidateBooleanConfigurationVariables
 
 ###########
 # GLOBALS #
 ###########
-# GitHub API root url
-if [ -n "$GITHUB_CUSTOM_API_URL" ]; then
-  GITHUB_API_URL="${GITHUB_CUSTOM_API_URL}"
-elif [ -z "$GITHUB_API_URL" ]; then
-  GITHUB_API_URL="https://api.github.com"
+DEFAULT_RULES_LOCATION='/action/lib/.automation'                              # Default rules files location
+DEFAULT_AWESOME_LINTER_WORKSPACE="/tmp/lint"                                  # Fall-back value for the workspace
+DEFAULT_WORKSPACE="${DEFAULT_WORKSPACE:-${DEFAULT_AWESOME_LINTER_WORKSPACE}}" # Default workspace if running locally
+FILTER_REGEX_INCLUDE="${FILTER_REGEX_INCLUDE:-""}"
+export FILTER_REGEX_INCLUDE
+FILTER_REGEX_EXCLUDE="${FILTER_REGEX_EXCLUDE:-""}"
+export FILTER_REGEX_EXCLUDE
+# shellcheck disable=SC2034 # Variable is referenced in other scripts
+RAW_FILE_ARRAY=() # Array of all files that were changed
+# shellcheck disable=SC2034 # Variable is referenced in other scripts
+TEST_CASE_FOLDER='test/linters' # Folder for test cases we should always ignore
+
+# Set the log level
+TF_LOG_LEVEL="info"
+if [[ "${LOG_DEBUG}" == "true" ]]; then
+  TF_LOG_LEVEL="debug"
 fi
-# Remove trailing slash if present
-GITHUB_API_URL="${GITHUB_API_URL%/}"
+export TF_LOG_LEVEL
+debug "TF_LOG_LEVEL: ${TF_LOG_LEVEL}"
+TFLINT_LOG="${TF_LOG_LEVEL}"
+export TFLINT_LOG
+debug "TFLINT_LOG: ${TFLINT_LOG}"
 
-# GitHub server url
-if [ -n "$GITHUB_DOMAIN" ]; then
-  GITHUB_SERVER_URL="${GITHUB_DOMAIN}"
-elif [ -z "$GITHUB_SERVER_URL" ]; then
-  GITHUB_SERVER_URL="https://github.com"
-fi
-# Extract domain name from URL
-GITHUB_SERVER_URL=$(echo "$GITHUB_SERVER_URL" | cut -d '/' -f 3)
+# Load linter configuration and rules files
+# shellcheck source=/dev/null
+source /action/lib/globals/linterRules.sh
 
-# Default Vars
-DEFAULT_RULES_LOCATION='/action/lib/.automation'          # Default rules files location
-LINTER_RULES_PATH="${LINTER_RULES_PATH:-.github/linters}" # Linter rules directory
-VERSION_FILE='/action/lib/functions/linterVersions.txt'   # File to store linter versions
-export VERSION_FILE                                       # Workaround SC2034
+# Load languages array
+# shellcheck source=/dev/null
+source /action/lib/globals/languages.sh
 
-debug "CREATE_LOG_FILE: ${CREATE_LOG_FILE}"
-
-###############
-# Rules files #
-###############
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-ANSIBLE_FILE_NAME="${ANSIBLE_CONFIG_FILE:-.ansible-lint.yml}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-ARM_FILE_NAME=".arm-ttk.psd1"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-CLOJURE_FILE_NAME=".clj-kondo/config.edn"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-CLOUDFORMATION_FILE_NAME=".cfnlintrc.yml"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-COFFEESCRIPT_FILE_NAME=".coffee-lint.json"
-CSS_FILE_NAME="${CSS_FILE_NAME:-.stylelintrc.json}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-DART_FILE_NAME="analysis_options.yml"
-DOCKERFILE_HADOLINT_FILE_NAME="${DOCKERFILE_HADOLINT_FILE_NAME:-.hadolint.yaml}"
-EDITORCONFIG_FILE_NAME="${EDITORCONFIG_FILE_NAME:-.ecrc}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-GITHUB_ACTIONS_FILE_NAME="${GITHUB_ACTIONS_CONFIG_FILE:-actionlint.yml}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-GITHUB_ACTIONS_COMMAND_ARGS="${GITHUB_ACTIONS_COMMAND_ARGS:-null}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-GITLEAKS_FILE_NAME="${GITLEAKS_CONFIG_FILE:-.gitleaks.toml}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-GHERKIN_FILE_NAME=".gherkin-lintrc"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-GO_FILE_NAME=".golangci.yml"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-GROOVY_FILE_NAME=".groovylintrc.json"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-HTML_FILE_NAME=".htmlhintrc"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-JAVA_FILE_NAME="${JAVA_FILE_NAME:-sun_checks.xml}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-JAVASCRIPT_ES_FILE_NAME="${JAVASCRIPT_ES_CONFIG_FILE:-.eslintrc.yml}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-JAVASCRIPT_DEFAULT_STYLE="${JAVASCRIPT_DEFAULT_STYLE:-standard}"
-JAVASCRIPT_STYLE_NAME='' # Variable for the style
-JAVASCRIPT_STYLE=''      # Variable for the style
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-JAVASCRIPT_STANDARD_FILE_NAME="${JAVASCRIPT_ES_CONFIG_FILE:-.eslintrc.yml}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-JSCPD_FILE_NAME="${JSCPD_CONFIG_FILE:-.jscpd.json}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-JSX_FILE_NAME="${JAVASCRIPT_ES_CONFIG_FILE:-.eslintrc.yml}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-KUBERNETES_KUBECONFORM_OPTIONS="${KUBERNETES_KUBECONFORM_OPTIONS:-null}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-LATEX_FILE_NAME=".chktexrc"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-LUA_FILE_NAME=".luacheckrc"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-MARKDOWN_FILE_NAME="${MARKDOWN_CONFIG_FILE:-.markdown-lint.yml}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-OPENAPI_FILE_NAME=".openapirc.yml"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-PERL_PERLCRITIC_OPTIONS="${PERL_PERLCRITIC_OPTIONS:-null}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-PHP_BUILTIN_FILE_NAME="${PHP_CONFIG_FILE:-php.ini}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-PHP_PHPCS_FILE_NAME="${PHP_PHPCS_FILE_NAME:-phpcs.xml}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-PHP_PHPSTAN_FILE_NAME="phpstan.neon"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-PHP_PSALM_FILE_NAME="psalm.xml"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-POWERSHELL_FILE_NAME=".powershell-psscriptanalyzer.psd1"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-PROTOBUF_FILE_NAME="${PROTOBUF_CONFIG_FILE:-.protolintrc.yml}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-PYTHON_BLACK_FILE_NAME="${PYTHON_BLACK_CONFIG_FILE:-.python-black}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-PYTHON_FLAKE8_FILE_NAME="${PYTHON_FLAKE8_CONFIG_FILE:-.flake8}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-PYTHON_ISORT_FILE_NAME="${PYTHON_ISORT_CONFIG_FILE:-.isort.cfg}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-PYTHON_MYPY_FILE_NAME="${PYTHON_MYPY_CONFIG_FILE:-.mypy.ini}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-PYTHON_PYLINT_FILE_NAME="${PYTHON_PYLINT_CONFIG_FILE:-.python-lint}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-R_FILE_NAME=".lintr"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-RUBY_FILE_NAME="${RUBY_CONFIG_FILE:-.ruby-lint.yml}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-SCALAFMT_FILE_NAME="${SCALAFMT_CONFIG_FILE:-.scalafmt.conf}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-SNAKEMAKE_SNAKEFMT_FILE_NAME="${SNAKEMAKE_SNAKEFMT_CONFIG_FILE:-.snakefmt.toml}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-SUPPRESS_FILE_TYPE_WARN="${SUPPRESS_FILE_TYPE_WARN:-false}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-SUPPRESS_POSSUM="${SUPPRESS_POSSUM:-false}"
-# SSH_KEY="${SSH_KEY}"
-SSH_SETUP_GITHUB="${SSH_SETUP_GITHUB:-false}"
-SSH_INSECURE_NO_VERIFY_GITHUB_KEY="${SSH_INSECURE_NO_VERIFY_GITHUB_KEY:-false}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-# SSL_CERT_SECRET="${SSL_CERT_SECRET}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-SQL_FILE_NAME="${SQL_CONFIG_FILE:-.sql-config.json}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-SQLFLUFF_FILE_NAME="${SQLFLUFF_CONFIG_FILE:-/.sqlfluff}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-TERRAFORM_TFLINT_FILE_NAME="${TERRAFORM_TFLINT_CONFIG_FILE:-.tflint.hcl}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-TERRAFORM_TERRASCAN_FILE_NAME="${TERRAFORM_TERRASCAN_CONFIG_FILE:-terrascan.toml}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-NATURAL_LANGUAGE_FILE_NAME="${NATURAL_LANGUAGE_CONFIG_FILE:-.textlintrc}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-TSX_FILE_NAME="${TYPESCRIPT_ES_CONFIG_FILE:-.eslintrc.yml}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-TYPESCRIPT_DEFAULT_STYLE="${TYPESCRIPT_DEFAULT_STYLE:-ts-standard}"
-TYPESCRIPT_STYLE_NAME='' # Variable for the style
-TYPESCRIPT_STYLE=''      # Variable for the style
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-TYPESCRIPT_ES_FILE_NAME="${TYPESCRIPT_ES_CONFIG_FILE:-.eslintrc.yml}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-USE_FIND_ALGORITHM="${USE_FIND_ALGORITHM:-false}"
-debug "USE_FIND_ALGORITHM: ${USE_FIND_ALGORITHM}"
-
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-YAML_FILE_NAME="${YAML_CONFIG_FILE:-.yaml-lint.yml}"
-# shellcheck disable=SC2034  # Variable is referenced indirectly
-YAML_ERROR_ON_WARNING="${YAML_ERROR_ON_WARNING:-false}"
-
-#################################################
-# Parse if we are using JS standard or prettier #
-#################################################
-# Remove spaces
-JAVASCRIPT_DEFAULT_STYLE=$(echo "${JAVASCRIPT_DEFAULT_STYLE}" | tr -d ' ')
-# lowercase
-JAVASCRIPT_DEFAULT_STYLE=$(echo "${JAVASCRIPT_DEFAULT_STYLE}" | tr '[:upper:]' '[:lower:]')
-# Check and set
-if [ "${JAVASCRIPT_DEFAULT_STYLE}" == "prettier" ]; then
-  # Set to prettier
-  JAVASCRIPT_STYLE_NAME='JAVASCRIPT_PRETTIER'
-  JAVASCRIPT_STYLE='prettier'
-else
-  # Default to standard
-  JAVASCRIPT_STYLE_NAME='JAVASCRIPT_STANDARD'
-  JAVASCRIPT_STYLE='standard'
-fi
-
-#################################################
-# Parse if we are using JS standard or prettier #
-#################################################
-# Remove spaces
-TYPESCRIPT_DEFAULT_STYLE=$(echo "${TYPESCRIPT_DEFAULT_STYLE}" | tr -d ' ')
-# lowercase
-TYPESCRIPT_DEFAULT_STYLE=$(echo "${TYPESCRIPT_DEFAULT_STYLE}" | tr '[:upper:]' '[:lower:]')
-# Check and set
-if [ "${TYPESCRIPT_DEFAULT_STYLE}" == "prettier" ]; then
-  # Set to prettier
-  TYPESCRIPT_STYLE_NAME='TYPESCRIPT_PRETTIER'
-  TYPESCRIPT_STYLE='prettier'
-else
-  # Default to standard
-  TYPESCRIPT_STYLE_NAME='TYPESCRIPT_STANDARD'
-  TYPESCRIPT_STYLE='ts-standard'
-fi
-
-##################
-# Language array #
-##################
-LANGUAGE_ARRAY=('ANSIBLE' 'ARM' 'BASH' 'BASH_EXEC' 'CLANG_FORMAT'
-  'CLOUDFORMATION' 'CLOJURE' 'COFFEESCRIPT' 'CPP' 'CSHARP' 'CSS' 'DART'
-  'DOCKERFILE_HADOLINT' 'EDITORCONFIG' 'ENV' 'GITHUB_ACTIONS'
-  'GITLEAKS' 'GHERKIN' 'GO' 'GOOGLE_JAVA_FORMAT' 'GROOVY' 'HTML' 'JAVA'
-  'JAVASCRIPT_ES' "${JAVASCRIPT_STYLE_NAME}" 'JSCPD' 'JSON' 'JSONC' 'JSX'
-  'KUBERNETES_KUBECONFORM' 'KOTLIN' 'KOTLIN_ANDROID' 'LATEX' 'LUA' 'MARKDOWN'
-  'NATURAL_LANGUAGE' 'OPENAPI' 'PERL' 'PHP_BUILTIN' 'PHP_PHPCS' 'PHP_PHPSTAN'
-  'PHP_PSALM' 'POWERSHELL' 'PROTOBUF' 'PYTHON_BLACK' 'PYTHON_PYLINT'
-  'PYTHON_FLAKE8' 'PYTHON_ISORT' 'PYTHON_MYPY' 'R' 'RAKU' 'RENOVATE' 'RUBY' 'RUST_2015'
-  'RUST_2018' 'RUST_2021' 'RUST_CLIPPY' 'SCALAFMT' 'SHELL_SHFMT'
-  'SNAKEMAKE_LINT' 'SNAKEMAKE_SNAKEFMT' 'STATES' 'SQL' 'SQLFLUFF' 'TEKTON'
-  'TERRAFORM_FMT' 'TERRAFORM_TFLINT' 'TERRAFORM_TERRASCAN' 'TERRAGRUNT' 'TSX'
-  'TYPESCRIPT_ES' "${TYPESCRIPT_STYLE_NAME}" 'XML' 'YAML')
-
-##############################
-# Linter command names array #
-##############################
-declare -A LINTER_NAMES_ARRAY
-LINTER_NAMES_ARRAY['ANSIBLE']="ansible-lint"
-LINTER_NAMES_ARRAY['ARM']="arm-ttk"
-LINTER_NAMES_ARRAY['BASH']="shellcheck"
-LINTER_NAMES_ARRAY['BASH_EXEC']="bash-exec"
-LINTER_NAMES_ARRAY['CLANG_FORMAT']="clang-format"
-LINTER_NAMES_ARRAY['CLOJURE']="clj-kondo"
-LINTER_NAMES_ARRAY['CLOUDFORMATION']="cfn-lint"
-LINTER_NAMES_ARRAY['COFFEESCRIPT']="coffeelint"
-LINTER_NAMES_ARRAY['CPP']="cpplint"
-LINTER_NAMES_ARRAY['CSHARP']="dotnet"
-LINTER_NAMES_ARRAY['CSS']="stylelint"
-LINTER_NAMES_ARRAY['DART']="dart"
-LINTER_NAMES_ARRAY['DOCKERFILE_HADOLINT']="hadolint"
-LINTER_NAMES_ARRAY['EDITORCONFIG']="editorconfig-checker"
-LINTER_NAMES_ARRAY['ENV']="dotenv-linter"
-LINTER_NAMES_ARRAY['GITHUB_ACTIONS']="actionlint"
-LINTER_NAMES_ARRAY['GITLEAKS']="gitleaks"
-LINTER_NAMES_ARRAY['GHERKIN']="gherkin-lint"
-LINTER_NAMES_ARRAY['GO']="golangci-lint"
-LINTER_NAMES_ARRAY['GOOGLE_JAVA_FORMAT']="google-java-format"
-LINTER_NAMES_ARRAY['GROOVY']="npm-groovy-lint"
-LINTER_NAMES_ARRAY['HTML']="htmlhint"
-LINTER_NAMES_ARRAY['JAVA']="checkstyle"
-LINTER_NAMES_ARRAY['JAVASCRIPT_ES']="eslint"
-LINTER_NAMES_ARRAY["${JAVASCRIPT_STYLE_NAME}"]="${JAVASCRIPT_STYLE}"
-LINTER_NAMES_ARRAY['JSCPD']="jscpd"
-LINTER_NAMES_ARRAY['JSON']="eslint"
-LINTER_NAMES_ARRAY['JSONC']="eslint"
-LINTER_NAMES_ARRAY['JSX']="eslint"
-LINTER_NAMES_ARRAY['KOTLIN']="ktlint"
-LINTER_NAMES_ARRAY['KOTLIN_ANDROID']="ktlint"
-LINTER_NAMES_ARRAY['KUBERNETES_KUBECONFORM']="kubeconform"
-LINTER_NAMES_ARRAY['LATEX']="chktex"
-LINTER_NAMES_ARRAY['LUA']="lua"
-LINTER_NAMES_ARRAY['MARKDOWN']="markdownlint"
-LINTER_NAMES_ARRAY['NATURAL_LANGUAGE']="textlint"
-LINTER_NAMES_ARRAY['OPENAPI']="spectral"
-LINTER_NAMES_ARRAY['PERL']="perl"
-LINTER_NAMES_ARRAY['PHP_BUILTIN']="php"
-LINTER_NAMES_ARRAY['PHP_PHPCS']="phpcs"
-LINTER_NAMES_ARRAY['PHP_PHPSTAN']="phpstan"
-LINTER_NAMES_ARRAY['PHP_PSALM']="psalm"
-LINTER_NAMES_ARRAY['POWERSHELL']="pwsh"
-LINTER_NAMES_ARRAY['PROTOBUF']="protolint"
-LINTER_NAMES_ARRAY['PYTHON_BLACK']="black"
-LINTER_NAMES_ARRAY['PYTHON_PYLINT']="pylint"
-LINTER_NAMES_ARRAY['PYTHON_FLAKE8']="flake8"
-LINTER_NAMES_ARRAY['PYTHON_ISORT']="isort"
-LINTER_NAMES_ARRAY['PYTHON_MYPY']="mypy"
-LINTER_NAMES_ARRAY['R']="R"
-LINTER_NAMES_ARRAY['RAKU']="raku"
-LINTER_NAMES_ARRAY['RENOVATE']="renovate-config-validator"
-LINTER_NAMES_ARRAY['RUBY']="rubocop"
-LINTER_NAMES_ARRAY['RUST_2015']="rustfmt"
-LINTER_NAMES_ARRAY['RUST_2018']="rustfmt"
-LINTER_NAMES_ARRAY['RUST_2021']="rustfmt"
-LINTER_NAMES_ARRAY['RUST_CLIPPY']="clippy"
-LINTER_NAMES_ARRAY['SCALAFMT']="scalafmt"
-LINTER_NAMES_ARRAY['SHELL_SHFMT']="shfmt"
-LINTER_NAMES_ARRAY['SNAKEMAKE_LINT']="snakemake"
-LINTER_NAMES_ARRAY['SNAKEMAKE_SNAKEFMT']="snakefmt"
-LINTER_NAMES_ARRAY['STATES']="asl-validator"
-LINTER_NAMES_ARRAY['SQL']="sql-lint"
-LINTER_NAMES_ARRAY['SQLFLUFF']="sqlfluff"
-LINTER_NAMES_ARRAY['TEKTON']="tekton-lint"
-LINTER_NAMES_ARRAY['TERRAFORM_FMT']="terraform"
-LINTER_NAMES_ARRAY['TERRAFORM_TFLINT']="tflint"
-LINTER_NAMES_ARRAY['TERRAFORM_TERRASCAN']="terrascan"
-LINTER_NAMES_ARRAY['TERRAGRUNT']="terragrunt"
-LINTER_NAMES_ARRAY['TSX']="eslint"
-LINTER_NAMES_ARRAY['TYPESCRIPT_ES']="eslint"
-LINTER_NAMES_ARRAY["${TYPESCRIPT_STYLE_NAME}"]="${TYPESCRIPT_STYLE}"
-LINTER_NAMES_ARRAY['XML']="xmllint"
-LINTER_NAMES_ARRAY['YAML']="yamllint"
-
-############################################
-# Array for all languages that were linted #
-############################################
-LINTED_LANGUAGES_ARRAY=() # Will be filled at run time with all languages that were linted
-
-###################
-# GitHub ENV Vars #
-###################
-MULTI_STATUS="${MULTI_STATUS:-true}"       # Multiple status are created for each check ran
-DEFAULT_BRANCH="${DEFAULT_BRANCH:-master}" # Default Git Branch to use (master by default)
-IGNORE_GITIGNORED_FILES="${IGNORE_GITIGNORED_FILES:-false}"
-debug "IGNORE_GITIGNORED_FILES: ${IGNORE_GITIGNORED_FILES}"
-
-# Do not ignore generated files by default for backwards compatibility
-IGNORE_GENERATED_FILES="${IGNORE_GENERATED_FILES:-false}"
-debug "IGNORE_GENERATED_FILES: ${IGNORE_GENERATED_FILES}"
-
-################
-# Default Vars #
-################
-DEFAULT_VALIDATE_ALL_CODEBASE='true'                                        # Default value for validate all files
-DEFAULT_SUPER_LINTER_WORKSPACE="/tmp/lint"                                  # Fall-back value for the workspace
-DEFAULT_WORKSPACE="${DEFAULT_WORKSPACE:-${DEFAULT_SUPER_LINTER_WORKSPACE}}" # Default workspace if running locally
-DEFAULT_RUN_LOCAL='false'                                                   # Default value for debugging locally
-DEFAULT_TEST_CASE_RUN='false'                                               # Flag to tell code to run only test cases
-
-if [ -z "${TEST_CASE_RUN}" ]; then
-  TEST_CASE_RUN="${DEFAULT_TEST_CASE_RUN}"
-fi
-
-# Convert string to lowercase
-TEST_CASE_RUN="${TEST_CASE_RUN,,}"
-debug "TEST_CASE_RUN: ${TEST_CASE_RUN}"
-
-if [ -z "${RUN_LOCAL}" ]; then
-  RUN_LOCAL="${DEFAULT_RUN_LOCAL}"
-fi
-
-# Convert string to lowercase
-RUN_LOCAL="${RUN_LOCAL,,}"
-debug "RUN_LOCAL: ${RUN_LOCAL}"
-
-###############################################################
-# Default Vars that are called in Subs and need to be ignored #
-###############################################################
-DEFAULT_DISABLE_ERRORS='false'                                  # Default to enabling errors
-export DEFAULT_DISABLE_ERRORS                                   # Workaround SC2034
-ERROR_ON_MISSING_EXEC_BIT="${ERROR_ON_MISSING_EXEC_BIT:-false}" # Default to report a warning if a shell script doesn't have the executable bit set to 1
-export ERROR_ON_MISSING_EXEC_BIT
-RAW_FILE_ARRAY=()                   # Array of all files that were changed
-export RAW_FILE_ARRAY               # Workaround SC2034
-TEST_CASE_FOLDER='.automation/test' # Folder for test cases we should always ignore
-export TEST_CASE_FOLDER             # Workaround SC2034
-
-##########################
-# Array of changed files #
-##########################
-for LANGUAGE in "${LANGUAGE_ARRAY[@]}"; do
-  FILE_ARRAY_VARIABLE_NAME="FILE_ARRAY_${LANGUAGE}"
-  debug "Setting ${FILE_ARRAY_VARIABLE_NAME} variable..."
-  eval "${FILE_ARRAY_VARIABLE_NAME}=()"
-done
-
-:
-########################## FUNCTIONS BELOW #####################################
-:
-:
-#### Function Header ###########################################################
 Header() {
-  ###############################
-  # Give them the possum action #
-  ###############################
   if [[ "${SUPPRESS_POSSUM}" == "false" ]]; then
-    /bin/bash /action/lib/functions/possum.sh
+    info "$(/bin/bash /action/lib/functions/possum.sh)"
   fi
 
-  ##########
-  # Prints #
-  ##########
   info "---------------------------------------------"
   info "--- GitHub Actions Multi Language Linter ----"
-  info " - Image Creation Date:[${BUILD_DATE}]"
-  info " - Image Revision:[${BUILD_REVISION}]"
-  info " - Image Version:[${BUILD_VERSION}]"
+  info " - Image Creation Date: ${BUILD_DATE}"
+  info " - Image Revision: ${BUILD_REVISION}"
+  info " - Image Version: ${BUILD_VERSION}"
   info "---------------------------------------------"
   info "---------------------------------------------"
   info "The Awesome-Linter source code can be found at:"
   info " - https://github.com/khulnasoft-lab/awesome-linter"
   info "---------------------------------------------"
+
+  if [[ ${VALIDATE_ALL_CODEBASE} != "false" ]]; then
+    VALIDATE_ALL_CODEBASE="true"
+    info "- Validating all files in code base..."
+  else
+    info "- Validating changed files in code base..."
+  fi
 }
 
 ConfigureGitSafeDirectories() {
   debug "Configuring Git safe directories"
-  declare -a git_safe_directories=("${GITHUB_WORKSPACE}" "${DEFAULT_SUPER_LINTER_WORKSPACE}" "${DEFAULT_WORKSPACE}")
+  declare -a git_safe_directories=("${GITHUB_WORKSPACE}" "${DEFAULT_AWESOME_LINTER_WORKSPACE}" "${DEFAULT_WORKSPACE}")
   for safe_directory in "${git_safe_directories[@]}"; do
     debug "Set ${safe_directory} as a Git safe directory"
     if ! git config --global --add safe.directory "${safe_directory}"; then
@@ -450,90 +229,124 @@ ConfigureGitSafeDirectories() {
   done
 }
 
-:
-#### Function GetGitHubVars ####################################################
 GetGitHubVars() {
-  ##########
-  # Prints #
-  ##########
   info "--------------------------------------------"
   info "Gathering GitHub information..."
+
+  local GITHUB_REPOSITORY_DEFAULT_BRANCH
+  GITHUB_REPOSITORY_DEFAULT_BRANCH="master"
 
   if [[ ${RUN_LOCAL} != "false" ]]; then
     info "RUN_LOCAL has been set to: ${RUN_LOCAL}. Bypassing GitHub Actions variables..."
 
-    if [ -z "${GITHUB_WORKSPACE}" ]; then
+    if [ -z "${GITHUB_WORKSPACE:-}" ]; then
       GITHUB_WORKSPACE="${DEFAULT_WORKSPACE}"
     fi
 
-    if [ ! -d "${GITHUB_WORKSPACE}" ]; then
-      fatal "Provided volume is not a directory!"
-    fi
+    ValidateGitHubWorkspace "${GITHUB_WORKSPACE}"
 
     pushd "${GITHUB_WORKSPACE}" >/dev/null || exit 1
-
-    VALIDATE_ALL_CODEBASE="${DEFAULT_VALIDATE_ALL_CODEBASE}"
-    info "Linting all files in mapped directory: ${GITHUB_WORKSPACE}. Setting VALIDATE_ALL_CODEBASE to: ${VALIDATE_ALL_CODEBASE}"
 
     if [[ "${USE_FIND_ALGORITHM}" == "false" ]]; then
       ConfigureGitSafeDirectories
       debug "Initializing GITHUB_SHA considering ${GITHUB_WORKSPACE}"
-      GITHUB_SHA=$(git -C "${GITHUB_WORKSPACE}" rev-parse HEAD)
-      ERROR_CODE=$?
-      debug "GITHUB_SHA initalization return code: ${ERROR_CODE}"
-      if [ ${ERROR_CODE} -ne 0 ]; then
+      if ! GITHUB_SHA=$(git -C "${GITHUB_WORKSPACE}" rev-parse HEAD); then
         fatal "Failed to initialize GITHUB_SHA. Output: ${GITHUB_SHA}"
       fi
       debug "GITHUB_SHA: ${GITHUB_SHA}"
     else
       debug "Skip the initalization of GITHUB_SHA because we don't need it"
     fi
+
+    MULTI_STATUS="false"
+    debug "Setting MULTI_STATUS to ${MULTI_STATUS} because we are not running on GitHub Actions"
   else
-    if [ -z "${GITHUB_WORKSPACE}" ]; then
-      error "Failed to get [GITHUB_WORKSPACE]!"
-      fatal "[${GITHUB_WORKSPACE}]"
+    ValidateGitHubWorkspace "${GITHUB_WORKSPACE}"
+
+    # Ensure that Git can access the local repository
+    ConfigureGitSafeDirectories
+
+    if [ -z "${GITHUB_EVENT_PATH:-}" ]; then
+      fatal "Failed to get GITHUB_EVENT_PATH: ${GITHUB_EVENT_PATH}]"
     else
-      info "Successfully found:${F[W]}[GITHUB_WORKSPACE]${F[B]}, value:${F[W]}[${GITHUB_WORKSPACE}]"
+      info "Successfully found GITHUB_EVENT_PATH: ${GITHUB_EVENT_PATH}]"
+      debug "${GITHUB_EVENT_PATH} contents:\n$(cat "${GITHUB_EVENT_PATH}")"
     fi
 
-    if [ -z "${GITHUB_EVENT_PATH}" ]; then
-      error "Failed to get [GITHUB_EVENT_PATH]!"
-      fatal "[${GITHUB_EVENT_PATH}]"
+    if [ -z "${GITHUB_SHA:-}" ]; then
+      fatal "Failed to get GITHUB_SHA: ${GITHUB_SHA}"
     else
-      info "Successfully found:${F[W]}[GITHUB_EVENT_PATH]${F[B]}, value:${F[W]}[${GITHUB_EVENT_PATH}]${F[B]}"
+      info "Successfully found GITHUB_SHA: ${GITHUB_SHA}"
     fi
 
-    if [ -z "${GITHUB_SHA}" ]; then
-      fatal "Failed to get the value for the GITHUB_SHA variable [${GITHUB_SHA}]"
+    if ! GIT_ROOT_COMMIT_SHA="$(git -C "${GITHUB_WORKSPACE}" rev-list --max-parents=0 "${GITHUB_SHA}")"; then
+      fatal "Failed to get the root commit: ${GIT_ROOT_COMMIT_SHA}"
     else
-      info "Successfully found:${F[W]}[GITHUB_SHA]${F[B]}, value:${F[W]}[${GITHUB_SHA}]"
+      debug "Successfully found the root commit: ${GIT_ROOT_COMMIT_SHA}"
     fi
+    export GIT_ROOT_COMMIT_SHA
 
     ##################################################
     # Need to pull the GitHub Vars from the env file #
     ##################################################
 
-    ######################
-    # Get the GitHub Org #
-    ######################
     GITHUB_ORG=$(jq -r '.repository.owner.login' <"${GITHUB_EVENT_PATH}")
 
-    ########################
-    # Fix SHA for PR event #
-    ########################
     # Github sha on PR events is not the latest commit.
     # https://docs.github.com/en/actions/reference/events-that-trigger-workflows#pull_request
     if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
-      debug "This is a GitHub pull request. Updating the current GITHUB_SHA (${GITHUB_SHA}) to the pull request HEAD sha"
-      GITHUB_SHA=$(jq -r .pull_request.head.sha <"$GITHUB_EVENT_PATH")
-      ERROR_CODE=$?
-      debug "GITHUB_SHA update error code: ${ERROR_CODE}"
+      debug "This is a GitHub pull request. Updating the current GITHUB_SHA (${GITHUB_SHA}) to the pull request HEAD SHA"
 
-      if [ ${ERROR_CODE} -ne 0 ]; then
-        error "Failed to update GITHUB_SHA for pull request event."
-        fatal "[Output: ${GITHUB_SHA}]"
+      if ! GITHUB_SHA=$(jq -r .pull_request.head.sha <"$GITHUB_EVENT_PATH"); then
+        fatal "Failed to update GITHUB_SHA for pull request event: ${GITHUB_SHA}"
       fi
       debug "Updated GITHUB_SHA: ${GITHUB_SHA}"
+    elif [ "${GITHUB_EVENT_NAME}" == "push" ]; then
+      debug "This is a GitHub push event."
+
+      if [[ "${GITHUB_SHA}" == "${GIT_ROOT_COMMIT_SHA}" ]]; then
+        debug "${GITHUB_SHA} is the initial commit. Skip initializing GITHUB_BEFORE_SHA because there no commit before the initial commit"
+      else
+        debug "${GITHUB_SHA} is not the initial commit"
+        GITHUB_PUSH_COMMIT_COUNT=$(GetGithubPushEventCommitCount "$GITHUB_EVENT_PATH")
+        if [ -z "${GITHUB_PUSH_COMMIT_COUNT}" ]; then
+          fatal "Failed to get GITHUB_PUSH_COMMIT_COUNT"
+        fi
+        info "Successfully found GITHUB_PUSH_COMMIT_COUNT: ${GITHUB_PUSH_COMMIT_COUNT}"
+
+        # Ref: https://docs.github.com/en/actions/learn-github-actions/contexts#github-context
+        debug "Get the hash of the commit to start the diff from from Git because the GitHub push event payload may not contain references to base_ref or previous commit."
+
+        debug "Check if the commit is a merge commit by checking if it has more than one parent"
+        local GIT_COMMIT_PARENTS_COUNT
+        GIT_COMMIT_PARENTS_COUNT=$(git -C "${GITHUB_WORKSPACE}" rev-list --parents -n 1 "${GITHUB_SHA}" | wc -w)
+        debug "Git commit parents count (GIT_COMMIT_PARENTS_COUNT): ${GIT_COMMIT_PARENTS_COUNT}"
+        GIT_COMMIT_PARENTS_COUNT=$((GIT_COMMIT_PARENTS_COUNT - 1))
+        debug "Subtract 1 from GIT_COMMIT_PARENTS_COUNT to get the actual number of merge parents because the count includes the commit itself. GIT_COMMIT_PARENTS_COUNT: ${GIT_COMMIT_PARENTS_COUNT}"
+
+        # Ref: https://git-scm.com/docs/git-rev-parse#Documentation/git-rev-parse.txt
+        local GIT_BEFORE_SHA_HEAD="HEAD"
+        if [ ${GIT_COMMIT_PARENTS_COUNT} -gt 1 ]; then
+          debug "${GITHUB_SHA} is a merge commit because it has more than one parent."
+          GIT_BEFORE_SHA_HEAD="${GIT_BEFORE_SHA_HEAD}^2"
+          debug "Add the suffix to GIT_BEFORE_SHA_HEAD to get the second parent of the merge commit: ${GIT_BEFORE_SHA_HEAD}"
+          GITHUB_PUSH_COMMIT_COUNT=$((GITHUB_PUSH_COMMIT_COUNT - 1))
+          debug "Remove one commit from GITHUB_PUSH_COMMIT_COUNT to account for the merge commit. GITHUB_PUSH_COMMIT_COUNT: ${GITHUB_PUSH_COMMIT_COUNT}"
+        else
+          debug "${GITHUB_SHA} is not a merge commit because it has a single parent. No need to add the parent identifier (^) to the revision indicator because it's implicitly set to ^1 when there's only one parent."
+        fi
+
+        GIT_BEFORE_SHA_HEAD="${GIT_BEFORE_SHA_HEAD}~${GITHUB_PUSH_COMMIT_COUNT}"
+        debug "GIT_BEFORE_SHA_HEAD: ${GIT_BEFORE_SHA_HEAD}"
+
+        # shellcheck disable=SC2086  # We checked that GITHUB_PUSH_COMMIT_COUNT is an integer
+        if ! GITHUB_BEFORE_SHA=$(git -C "${GITHUB_WORKSPACE}" rev-parse ${GIT_BEFORE_SHA_HEAD}); then
+          fatal "Failed to initialize GITHUB_BEFORE_SHA for a push event. Output: ${GITHUB_BEFORE_SHA}"
+        fi
+
+        ValidateGitBeforeShaReference
+        info "Successfully found GITHUB_BEFORE_SHA: ${GITHUB_BEFORE_SHA}"
+      fi
     fi
 
     ############################
@@ -543,7 +356,7 @@ GetGitHubVars() {
       error "Failed to get [GITHUB_ORG]!"
       fatal "[${GITHUB_ORG}]"
     else
-      info "Successfully found:${F[W]}[GITHUB_ORG]${F[B]}, value:${F[W]}[${GITHUB_ORG}]"
+      info "Successfully found GITHUB_ORG: ${GITHUB_ORG}"
     fi
 
     #######################
@@ -558,62 +371,67 @@ GetGitHubVars() {
       error "Failed to get [GITHUB_REPO]!"
       fatal "[${GITHUB_REPO}]"
     else
-      info "Successfully found:${F[W]}[GITHUB_REPO]${F[B]}, value:${F[W]}[${GITHUB_REPO}]"
+      info "Successfully found GITHUB_REPO: ${GITHUB_REPO}"
     fi
+
+    GITHUB_REPOSITORY_DEFAULT_BRANCH=$(GetGithubRepositoryDefaultBranch "${GITHUB_EVENT_PATH}")
   fi
 
-  ############################
-  # Validate we have a value #
-  ############################
-  if [ "${MULTI_STATUS}" == "true" ] && [ -z "${GITHUB_TOKEN}" ] && [[ ${RUN_LOCAL} == "false" ]]; then
-    error "Failed to get [GITHUB_TOKEN]!"
-    error "[${GITHUB_TOKEN}]"
-    error "Please set a [GITHUB_TOKEN] from the main workflow environment to take advantage of multiple status reports!"
-
-    :
-    # Need to set MULTI_STATUS to false as we cant hit API endpoints without token #
-    :
-    MULTI_STATUS='false'
+  if [ -z "${GITHUB_REPOSITORY_DEFAULT_BRANCH}" ]; then
+    fatal "Failed to get GITHUB_REPOSITORY_DEFAULT_BRANCH"
   else
-    info "Successfully found:${F[W]}[GITHUB_TOKEN]"
+    debug "Successfully detected the default branch for this repository: ${GITHUB_REPOSITORY_DEFAULT_BRANCH}"
   fi
 
-  ###############################
-  # Convert string to lowercase #
-  ###############################
-  MULTI_STATUS="${MULTI_STATUS,,}"
+  DEFAULT_BRANCH="${DEFAULT_BRANCH:-${GITHUB_REPOSITORY_DEFAULT_BRANCH}}"
 
-  :
-  # Check to see if the multi status is set, and we have a token to use #
-  :
-  if [ "${MULTI_STATUS}" == "true" ] && [ -n "${GITHUB_TOKEN}" ]; then
-    ############################
-    # Validate we have a value #
-    ############################
-    if [ -z "${GITHUB_REPOSITORY}" ]; then
+  if [[ "${DEFAULT_BRANCH}" != "${GITHUB_REPOSITORY_DEFAULT_BRANCH}" ]]; then
+    debug "The default branch for this repository was set to ${GITHUB_REPOSITORY_DEFAULT_BRANCH}, but it was explicitly overridden using the DEFAULT_BRANCH variable, and set to: ${DEFAULT_BRANCH}"
+  fi
+  info "The default branch for this repository is set to: ${DEFAULT_BRANCH}"
+
+  if [ "${MULTI_STATUS}" == "true" ]; then
+
+    if [[ ${RUN_LOCAL} == "true" ]]; then
+      # Safety check. This shouldn't occur because we forcefully set MULTI_STATUS=false above
+      # when RUN_LOCAL=true
+      fatal "Cannot enable status reports when running locally."
+    fi
+
+    if [ -z "${GITHUB_TOKEN:-}" ]; then
+      fatal "Failed to get [GITHUB_TOKEN]. Terminating because status reports were explicitly enabled, but GITHUB_TOKEN was not provided."
+    else
+      info "Successfully found GITHUB_TOKEN."
+    fi
+
+    if [ -z "${GITHUB_REPOSITORY:-}" ]; then
       error "Failed to get [GITHUB_REPOSITORY]!"
       fatal "[${GITHUB_REPOSITORY}]"
     else
-      info "Successfully found:${F[W]}[GITHUB_REPOSITORY]${F[B]}, value:${F[W]}[${GITHUB_REPOSITORY}]"
+      info "Successfully found GITHUB_REPOSITORY: ${GITHUB_REPOSITORY}"
     fi
 
-    ############################
-    # Validate we have a value #
-    ############################
-    if [ -z "${GITHUB_RUN_ID}" ]; then
+    if [ -z "${GITHUB_RUN_ID:-}" ]; then
       error "Failed to get [GITHUB_RUN_ID]!"
       fatal "[${GITHUB_RUN_ID}]"
     else
-      info "Successfully found:${F[W]}[GITHUB_RUN_ID]${F[B]}, value:${F[W]}[${GITHUB_RUN_ID}]"
+      info "Successfully found GITHUB_RUN_ID ${GITHUB_RUN_ID}"
     fi
+
+    GITHUB_STATUS_URL="${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
+    debug "GitHub Status URL: ${GITHUB_STATUS_URL}"
+
+    GITHUB_STATUS_TARGET_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+    debug "GitHub Status target URL: ${GITHUB_STATUS_TARGET_URL}"
+  else
+    debug "Skip GITHUB_TOKEN, GITHUB_REPOSITORY, and GITHUB_RUN_ID validation because we don't need these variables for GitHub Actions status reports. MULTI_STATUS: ${MULTI_STATUS}"
   fi
+
+  # We need this for parallel
+  export GITHUB_WORKSPACE
 }
-:
-#### Function CallStatusAPI ####################################################
+
 CallStatusAPI() {
-  ####################
-  # Pull in the vars #
-  ####################
   LANGUAGE="${1}" # language that was validated
   STATUS="${2}"   # success | error
   SUCCESS_MSG='No errors were found in the linting process'
@@ -643,148 +461,162 @@ CallStatusAPI() {
       STATUS="success"
     fi
 
-    debug "Status URL: ${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
-
     ##############################################
     # Call the status API to create status check #
     ##############################################
-    SEND_STATUS_CMD=$(
+    if ! SEND_STATUS_CMD=$(
       curl -f -s --show-error -X POST \
-        --url "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+        --url "${GITHUB_STATUS_URL}" \
         -H 'accept: application/vnd.github.v3+json' \
         -H "authorization: Bearer ${GITHUB_TOKEN}" \
         -H 'content-type: application/json' \
         -d "{ \"state\": \"${STATUS}\",
-        \"target_url\": \"https://${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\",
+        \"target_url\": \"${GITHUB_STATUS_TARGET_URL}\",
         \"description\": \"${MESSAGE}\", \"context\": \"--> Linted: ${LANGUAGE}\"
       }" 2>&1
-    )
-
-    #######################
-    # Load the error code #
-    #######################
-    ERROR_CODE=$?
-
-    debug "Send status comd output: [$SEND_STATUS_CMD]"
-
-    ##############################
-    # Check the shell for errors #
-    ##############################
-    if [ "${ERROR_CODE}" -ne 0 ]; then
+    ); then
       info "Failed to call GitHub Status API: ${SEND_STATUS_CMD}"
     fi
   fi
 }
-:
-#### Function Footer ###########################################################
+
 Footer() {
   info "----------------------------------------------"
   info "----------------------------------------------"
-  info "The script has completed"
-  info "----------------------------------------------"
-  info "----------------------------------------------"
 
-  ####################################################
-  # Need to clean up the lanuage array of duplicates #
-  ####################################################
-  mapfile -t UNIQUE_LINTED_ARRAY < <(for LANG in "${LINTED_LANGUAGES_ARRAY[@]}"; do echo "${LANG}"; done | sort -u)
-  export UNIQUE_LINTED_ARRAY # Workaround SC2034
+  local ANY_LINTER_SUCCESS
+  ANY_LINTER_SUCCESS="false"
 
-  ##############################
-  # Prints for errors if found #
-  ##############################
+  local AWESOME_LINTER_EXIT_CODE
+  AWESOME_LINTER_EXIT_CODE=0
+
+  if [[ "${SAVE_AWESOME_LINTER_SUMMARY}" == "true" ]]; then
+    debug "Saving Awesome-linter summary to ${AWESOME_LINTER_SUMMARY_OUTPUT_PATH}"
+    WriteSummaryHeader "${AWESOME_LINTER_SUMMARY_OUTPUT_PATH}"
+  fi
+
   for LANGUAGE in "${LANGUAGE_ARRAY[@]}"; do
-    ###########################
-    # Build the error counter #
-    ###########################
-    ERROR_COUNTER="ERRORS_FOUND_${LANGUAGE}"
+    # This used to be the count of errors found for a given LANGUAGE, but since
+    # after we switched to running linters against a batch of files, it may not
+    # represent the actual number of files that didn't pass the validation,
+    # but a number that's less than that because of how GNU parallel returns
+    # exit codes.
+    # Ref: https://www.gnu.org/software/parallel/parallel.html#exit-status
+    ERROR_COUNTER_FILE_PATH="${AWESOME_LINTER_PRIVATE_OUTPUT_DIRECTORY_PATH}/awesome-linter-parallel-command-exit-code-${LANGUAGE}"
+    if [ ! -f "${ERROR_COUNTER_FILE_PATH}" ]; then
+      debug "Error counter ${ERROR_COUNTER_FILE_PATH} doesn't exist"
+    else
+      ERROR_COUNTER=$(<"${ERROR_COUNTER_FILE_PATH}")
+      debug "ERROR_COUNTER for ${LANGUAGE}: ${ERROR_COUNTER}"
 
-    ##################
-    # Print if not 0 #
-    ##################
-    if [[ ${!ERROR_COUNTER} -ne 0 ]]; then
-      # We found errors in the language
-      ###################
-      # Print the goods #
-      ###################
-      error "ERRORS FOUND${NC} in ${LANGUAGE}:[${!ERROR_COUNTER}]"
+      if [[ ${ERROR_COUNTER} -ne 0 ]]; then
+        error "Errors found in ${LANGUAGE}"
 
-      #########################################
-      # Create status API for Failed language #
-      #########################################
-      CallStatusAPI "${LANGUAGE}" "error"
-      ######################################
-      # Check if we validated the language #
-      ######################################
-    elif [[ ${!ERROR_COUNTER} -eq 0 ]]; then
-      if CheckInArray "${LANGUAGE}"; then
-        # No errors found when linting the language
+        if [[ "${SAVE_AWESOME_LINTER_SUMMARY}" == "true" ]]; then
+          WriteSummaryLineFailure "${AWESOME_LINTER_SUMMARY_OUTPUT_PATH}" "${LANGUAGE}"
+        fi
+
+        # Print stdout and stderr in case the log level is higher than INFO
+        # so users still get feedback. Print output as error so it gets emitted
+        if [[ "${LOG_VERBOSE}" != "true" ]]; then
+          local STDOUT_LINTER_FILE_PATH
+          STDOUT_LINTER_FILE_PATH="${AWESOME_LINTER_PRIVATE_OUTPUT_DIRECTORY_PATH}/awesome-linter-parallel-stdout-${LANGUAGE}"
+          if [[ -e "${STDOUT_LINTER_FILE_PATH}" ]]; then
+            error "Stdout contents for ${LANGUAGE}:\n------\n$(cat "${STDOUT_LINTER_FILE_PATH}")\n------"
+          else
+            debug "Stdout output file path for ${LANGUAGE} (${STDOUT_LINTER_FILE_PATH}) doesn't exist"
+          fi
+
+          local STDERR_LINTER_FILE_PATH
+          STDERR_LINTER_FILE_PATH="${AWESOME_LINTER_PRIVATE_OUTPUT_DIRECTORY_PATH}/awesome-linter-parallel-stderr-${LANGUAGE}"
+          if [[ -e "${STDERR_LINTER_FILE_PATH}" ]]; then
+            error "Stderr contents for ${LANGUAGE}:\n------\n$(cat "${STDERR_LINTER_FILE_PATH}")\n------"
+          else
+            debug "Stderr output file path for ${LANGUAGE} (${STDERR_LINTER_FILE_PATH}) doesn't exist"
+          fi
+        fi
+        CallStatusAPI "${LANGUAGE}" "error"
+        AWESOME_LINTER_EXIT_CODE=1
+        debug "Setting awesome-linter exit code to ${AWESOME_LINTER_EXIT_CODE} because there were errors for ${LANGUAGE}"
+      elif [[ ${ERROR_COUNTER} -eq 0 ]]; then
+        notice "Successfully linted ${LANGUAGE}"
+        if [[ "${SAVE_AWESOME_LINTER_SUMMARY}" == "true" ]]; then
+          WriteSummaryLineSuccess "${AWESOME_LINTER_SUMMARY_OUTPUT_PATH}" "${LANGUAGE}"
+        fi
         CallStatusAPI "${LANGUAGE}" "success"
+        ANY_LINTER_SUCCESS="true"
+        debug "Set ANY_LINTER_SUCCESS to ${ANY_LINTER_SUCCESS} because ${LANGUAGE} reported a success"
       fi
     fi
   done
 
-  ##################################
-  # Exit with 0 if errors disabled #
-  ##################################
-  if [ "${DISABLE_ERRORS}" == "true" ]; then
-    warn "Exiting with exit code:[0] as:[DISABLE_ERRORS] was set to:[${DISABLE_ERRORS}]"
-    exit 0
+  if [[ "${ANY_LINTER_SUCCESS}" == "true" ]] && [[ ${AWESOME_LINTER_EXIT_CODE} -ne 0 ]]; then
+    AWESOME_LINTER_EXIT_CODE=2
+    debug "There was at least one linter that reported a success. Setting the awesome-linter exit code to: ${AWESOME_LINTER_EXIT_CODE}"
   fi
 
-  ###############################
-  # Exit with 1 if errors found #
-  ###############################
-  # Loop through all languages
-  for LANGUAGE in "${LANGUAGE_ARRAY[@]}"; do
-    # build the variable
-    ERRORS_FOUND_LANGUAGE="ERRORS_FOUND_${LANGUAGE}"
-    # Check if error was found
-    if [[ ${!ERRORS_FOUND_LANGUAGE} -ne 0 ]]; then
-      # Failed exit
-      fatal "Exiting with errors found!"
-    fi
-  done
+  if [ "${DISABLE_ERRORS}" == "true" ]; then
+    warn "The awesome-linter exit code is ${AWESOME_LINTER_EXIT_CODE}. Forcibly setting it to 0 because DISABLE_ERRORS is set to: ${DISABLE_ERRORS}"
+    AWESOME_LINTER_EXIT_CODE=0
+  fi
 
-  ########################
-  # Footer prints Exit 0 #
-  ########################
-  notice "All file(s) linted successfully with no errors detected"
-  info "----------------------------------------------"
-  # Successful exit
-  exit 0
+  if [[ ${AWESOME_LINTER_EXIT_CODE} -eq 0 ]]; then
+    notice "All files and directories linted successfully"
+    if [[ "${SAVE_AWESOME_LINTER_SUMMARY}" == "true" ]]; then
+      WriteSummaryFooterSuccess "${AWESOME_LINTER_SUMMARY_OUTPUT_PATH}"
+    fi
+  else
+    error "Awesome-linter detected linting errors"
+    if [[ "${SAVE_AWESOME_LINTER_SUMMARY}" == "true" ]]; then
+      WriteSummaryFooterFailure "${AWESOME_LINTER_SUMMARY_OUTPUT_PATH}"
+    fi
+  fi
+
+  if [[ "${SAVE_AWESOME_LINTER_SUMMARY}" == "true" ]]; then
+    if ! FormatAwesomeLinterSummaryFile "${AWESOME_LINTER_SUMMARY_OUTPUT_PATH}"; then
+      fatal "Error while formatting the Awesome-linter summary file."
+    fi
+    debug "Awesome-linter summary file (${AWESOME_LINTER_SUMMARY_OUTPUT_PATH}) contents:\n$(cat "${AWESOME_LINTER_SUMMARY_OUTPUT_PATH}")"
+  fi
+
+  if [[ "${ENABLE_GITHUB_ACTIONS_STEP_SUMMARY}" == "true" ]]; then
+    debug "Appending Awesome-linter summary to ${GITHUB_STEP_SUMMARY}"
+    if ! cat "${AWESOME_LINTER_SUMMARY_OUTPUT_PATH}" >>"${GITHUB_STEP_SUMMARY}"; then
+      fatal "Error while appending the content of ${AWESOME_LINTER_SUMMARY_OUTPUT_PATH} to ${GITHUB_STEP_SUMMARY}"
+    fi
+  fi
+
+  exit ${AWESOME_LINTER_EXIT_CODE}
 }
-:
-#### Function UpdateLoopsForImage ##############################################
+
 UpdateLoopsForImage() {
-:
+  ######################################################################
   # Need to clean the array lists of the linters removed for the image #
-:
+  ######################################################################
   if [[ "${IMAGE}" == "slim" ]]; then
     #############################################
     # Need to remove linters for the slim image #
     #############################################
-    REMOVE_ARRAY=("ARM" "CSHARP" "ENV" "POWERSHELL" "RUST_2015" "RUST_2018"
-      "RUST_2021" "RUST_CLIPPY")
+    REMOVE_ARRAY=(
+      "ARM"
+      "CSHARP"
+      "DOTNET_SLN_FORMAT_ANALYZERS"
+      "DOTNET_SLN_FORMAT_STYLE"
+      "DOTNET_SLN_FORMAT_WHITESPACE"
+      "POWERSHELL"
+      "RUST_2015"
+      "RUST_2018"
+      "RUST_2021"
+      "RUST_CLIPPY"
+    )
 
     # Remove from LANGUAGE_ARRAY
-    echo "Removing Languages from LANGUAGE_ARRAY for slim image..."
+    debug "Removing Languages from LANGUAGE_ARRAY for slim image..."
     for REMOVE_LANGUAGE in "${REMOVE_ARRAY[@]}"; do
       for INDEX in "${!LANGUAGE_ARRAY[@]}"; do
         if [[ ${LANGUAGE_ARRAY[INDEX]} = "${REMOVE_LANGUAGE}" ]]; then
-          echo "found item:[${REMOVE_LANGUAGE}], removing Language..."
+          debug "found item:[${REMOVE_LANGUAGE}], removing Language..."
           unset 'LANGUAGE_ARRAY[INDEX]'
-        fi
-      done
-    done
-
-    # Remove from LINTER_NAMES_ARRAY
-    echo "Removing Linters from LINTER_NAMES_ARRAY for slim image..."
-    for REMOVE_LINTER in "${REMOVE_ARRAY[@]}"; do
-      for INDEX in "${!LINTER_NAMES_ARRAY[@]}"; do
-        if [[ ${INDEX} = "${REMOVE_LINTER}" ]]; then
-          echo "found item:[${REMOVE_LINTER}], removing linter..."
-          unset 'LINTER_NAMES_ARRAY[$INDEX]'
         fi
       done
     done
@@ -794,17 +626,49 @@ UpdateLoopsForImage() {
 # shellcheck disable=SC2317
 cleanup() {
   local -ri EXIT_CODE=$?
-  # Define this variable here so we can rely on it as soon as possible
-  local LOG_FILE_PATH="${GITHUB_WORKSPACE}/${LOG_FILE}"
-  debug "LOG_FILE_PATH: ${LOG_FILE_PATH}"
-  if [ "${CREATE_LOG_FILE}" = "true" ]; then
-    debug "Moving log file from ${LOG_TEMP} to ${LOG_FILE_PATH}"
-    mv \
-      --force \
-      --verbose \
-      "${LOG_TEMP}" "${LOG_FILE_PATH}"
+  debug "Captured exit code: ${EXIT_CODE}"
+
+  if [ -n "${GITHUB_WORKSPACE:-}" ]; then
+    debug "Removing temporary files and directories"
+    rm -rf \
+      "${GITHUB_WORKSPACE}/.mypy_cache" \
+      "${GITHUB_WORKSPACE}/logback.log" \
+      "${GITHUB_WORKSPACE}/.ruff_cache"
+
+    if [[ "${AWESOME_LINTER_COPIED_R_LINTER_RULES_FILE:-}" == "true" ]]; then
+      debug "Deleting ${R_RULES_FILE_PATH_IN_ROOT} because awesome-linter created it."
+      rm -rf "${R_RULES_FILE_PATH_IN_ROOT}"
+    fi
+
+    # Define this variable here so we can rely on it as soon as possible
+    local LOG_FILE_PATH="${GITHUB_WORKSPACE}/${LOG_FILE}"
+    debug "LOG_FILE_PATH: ${LOG_FILE_PATH}"
+    if [ "${CREATE_LOG_FILE}" = "true" ]; then
+      if [[ "${REMOVE_ANSI_COLOR_CODES_FROM_OUTPUT}" == "true" ]] &&
+        ! RemoveAnsiColorCodesFromFile "${LOG_TEMP}"; then
+        fatal "Error while removing ANSI color codes from ${LOG_TEMP}"
+      fi
+      debug "Moving log file from ${LOG_TEMP} to ${LOG_FILE_PATH}"
+      mv \
+        --force \
+        "${LOG_TEMP}" "${LOG_FILE_PATH}"
+    else
+      debug "Skip moving the log file from ${LOG_TEMP} to ${LOG_FILE_PATH}"
+    fi
+
+    if [ "${SAVE_AWESOME_LINTER_OUTPUT}" = "true" ]; then
+      if [ -e "${AWESOME_LINTER_OUTPUT_DIRECTORY_PATH}" ]; then
+        debug "${AWESOME_LINTER_OUTPUT_DIRECTORY_PATH} already exists. Deleting it before moving the new output directory there."
+        rm -fr "${AWESOME_LINTER_OUTPUT_DIRECTORY_PATH}"
+      fi
+      debug "Moving Awesome-linter output from ${AWESOME_LINTER_PRIVATE_OUTPUT_DIRECTORY_PATH} to ${AWESOME_LINTER_OUTPUT_DIRECTORY_PATH}"
+      mv "${AWESOME_LINTER_PRIVATE_OUTPUT_DIRECTORY_PATH}" "${AWESOME_LINTER_OUTPUT_DIRECTORY_PATH}"
+    else
+      debug "Skip moving the private Awesome-linter output directory (${AWESOME_LINTER_PRIVATE_OUTPUT_DIRECTORY_PATH}) to the output directory (${AWESOME_LINTER_OUTPUT_DIRECTORY_PATH:-"not initialized yet"})"
+    fi
+
   else
-    debug "Skipping the moving of the log file from ${LOG_TEMP} to ${LOG_FILE_PATH}"
+    debug "GITHUB_WORKSPACE is not set. Skipping filesystem cleanup steps"
   fi
 
   exit "${EXIT_CODE}"
@@ -812,30 +676,18 @@ cleanup() {
 }
 trap 'cleanup' 0 1 2 3 6 14 15
 
-:
-############################### MAIN ###########################################
-:
-
 ##########
 # Header #
 ##########
 Header
-
-############################################
-# Create SSH agent and add key if provided #
-############################################
-SetupSshAgent
-SetupGithubComSshKeys
 
 ################################################
 # Need to update the loops for the image style #
 ################################################
 UpdateLoopsForImage
 
-##################################
-# Get and print all version info #
-##################################
-GetLinterVersions
+# Print linter versions
+info "This version of Awesome-linter includes the following tools:\n$(cat "${VERSION_FILE}")"
 
 #######################
 # Get GitHub Env Vars #
@@ -848,30 +700,108 @@ GetGitHubVars
 # all cases when initializing variables
 ConfigureGitSafeDirectories
 
+############################################
+# Create SSH agent and add key if provided #
+############################################
+SetupSshAgent
+SetupGithubComSshKeys
+
 ########################################################
 # Initialize variables that depend on GitHub variables #
 ########################################################
-DEFAULT_ANSIBLE_DIRECTORY="${GITHUB_WORKSPACE}/ansible"                               # Default Ansible Directory
-export DEFAULT_ANSIBLE_DIRECTORY                                                      # Workaround SC2034
-DEFAULT_TEST_CASE_ANSIBLE_DIRECTORY="${GITHUB_WORKSPACE}/${TEST_CASE_FOLDER}/ansible" # Default Ansible directory when running test cases
-export DEFAULT_TEST_CASE_ANSIBLE_DIRECTORY                                            # Workaround SC2034
-
 TYPESCRIPT_STANDARD_TSCONFIG_FILE="${GITHUB_WORKSPACE}/${TYPESCRIPT_STANDARD_TSCONFIG_FILE:-"tsconfig.json"}"
 debug "TYPESCRIPT_STANDARD_TSCONFIG_FILE: ${TYPESCRIPT_STANDARD_TSCONFIG_FILE}"
+
+R_RULES_FILE_PATH_IN_ROOT="${GITHUB_WORKSPACE}/${R_FILE_NAME}"
+debug "R_RULES_FILE_PATH_IN_ROOT: ${R_RULES_FILE_PATH_IN_ROOT}"
+
+AWESOME_LINTER_MAIN_OUTPUT_DIRECTORY_PATH="${GITHUB_WORKSPACE}/${AWESOME_LINTER_OUTPUT_DIRECTORY_NAME}"
+export AWESOME_LINTER_MAIN_OUTPUT_DIRECTORY_PATH
+debug "Awesome-linter main output directory path: ${AWESOME_LINTER_MAIN_OUTPUT_DIRECTORY_PATH}"
+
+AWESOME_LINTER_OUTPUT_DIRECTORY_PATH="${AWESOME_LINTER_MAIN_OUTPUT_DIRECTORY_PATH}/awesome-linter"
+export AWESOME_LINTER_OUTPUT_DIRECTORY_PATH
+debug "Awesome-linter output directory path: ${AWESOME_LINTER_OUTPUT_DIRECTORY_PATH}"
+
+AWESOME_LINTER_SUMMARY_OUTPUT_PATH="${AWESOME_LINTER_MAIN_OUTPUT_DIRECTORY_PATH}/${AWESOME_LINTER_SUMMARY_FILE_NAME:-"awesome-linter-summary.md"}"
+export AWESOME_LINTER_SUMMARY_OUTPUT_PATH
+debug "Awesome-linter summary output path: ${AWESOME_LINTER_SUMMARY_OUTPUT_PATH}"
+
+if [[ "${ENABLE_GITHUB_ACTIONS_STEP_SUMMARY}" == "true" ]] && [[ "${SAVE_AWESOME_LINTER_SUMMARY}" == "false" ]]; then
+  debug "ENABLE_GITHUB_ACTIONS_STEP_SUMMARY is set to ${SAVE_AWESOME_LINTER_SUMMARY}, but SAVE_AWESOME_LINTER_SUMMARY is set to ${SAVE_AWESOME_LINTER_SUMMARY}"
+  SAVE_AWESOME_LINTER_SUMMARY="true"
+  debug "Set SAVE_AWESOME_LINTER_SUMMARY to ${SAVE_AWESOME_LINTER_SUMMARY} because we need to append its contents to ${GITHUB_STEP_SUMMARY} later"
+fi
+
+# Ensure that the main output directory and files exist because the user might not have created them
+# before running Awesome-linter. These conditions list all the cases that require an output
+# directory to be there.
+if [[ "${SAVE_AWESOME_LINTER_OUTPUT}" = "true" ]] ||
+  [[ "${SAVE_AWESOME_LINTER_SUMMARY}" == "true" ]] ||
+  [[ "${CREATE_LOG_FILE}" = "true" ]]; then
+  debug "Ensure that ${AWESOME_LINTER_MAIN_OUTPUT_DIRECTORY_PATH} exists"
+  mkdir -p "${AWESOME_LINTER_MAIN_OUTPUT_DIRECTORY_PATH}"
+fi
+
+if [[ "${SAVE_AWESOME_LINTER_SUMMARY}" == "true" ]]; then
+  debug "Remove eventual ${AWESOME_LINTER_SUMMARY_OUTPUT_PATH} leftover"
+  rm -f "${AWESOME_LINTER_SUMMARY_OUTPUT_PATH}"
+
+  debug "Ensuring that ${AWESOME_LINTER_SUMMARY_OUTPUT_PATH} exists."
+  if ! touch "${AWESOME_LINTER_SUMMARY_OUTPUT_PATH}"; then
+    fatal "Cannot create Awesome-linter summary file: ${AWESOME_LINTER_SUMMARY_OUTPUT_PATH}"
+  fi
+fi
 
 ############################
 # Validate the environment #
 ############################
-GetValidationInfo
+info "--------------------------------------------"
+info "Validating the configuration"
+if ! ValidateFindMode; then
+  fatal "Error while validating the configuration."
+fi
+if ! ValidateValidationVariables; then
+  fatal "Error while validating the configuration of enabled linters"
+fi
+if ! ValidateAnsibleDirectory; then
+  fatal "Error while validating the configuration of the Ansible directory"
+fi
 
-if [[ "${USE_FIND_ALGORITHM}" == "false" ]]; then
+if [[ "${ENABLE_GITHUB_ACTIONS_STEP_SUMMARY}" == "true" ]] ||
+  [[ "${SAVE_AWESOME_LINTER_SUMMARY}" == "true" ]]; then
+  if ! ValidateAwesomeLinterSummaryOutputPath; then
+    fatal "Awesome-linter summary configuration failed validation"
+  fi
+else
+  debug "Awesome-linter summary is disabled. No need to validate its configuration."
+fi
+
+if [[ "${USE_FIND_ALGORITHM}" == "false" ]] || [[ "${IGNORE_GITIGNORED_FILES}" == "true" ]]; then
   debug "Validate the local Git environment"
   ValidateLocalGitRepository
-  ValidateGitShaReference
-  ValidateDefaultGitBranch
+
+  # We need to validate the commit SHA reference and the default branch only when
+  # using Git to get the list of files to lint
+  if [[ "${USE_FIND_ALGORITHM}" == "false" ]]; then
+    debug "Validate the Git SHA and branch references"
+    ValidateGitShaReference
+    ValidateDefaultGitBranch
+  fi
 else
   debug "Skipped the validation of the local Git environment because we don't depend on it."
 fi
+
+if ! ValidateCommitlintConfiguration "${GITHUB_WORKSPACE}" "${ENFORCE_COMMITLINT_CONFIGURATION_CHECK}"; then
+  fatal "Error while validating commitlint configuration"
+fi
+
+ValidateDeprecatedVariables
+
+# After checking if LOG_LEVEL is set to a deprecated value (see the ValidateDeprecatedVariables function),
+# we can unset it so other programs that rely on this variable, such as Checkov and renovate-config-validator
+# don't get confused.
+unset LOG_LEVEL
 
 #################################
 # Get the linter rules location #
@@ -881,8 +811,6 @@ LinterRulesLocation
 ########################
 # Get the linter rules #
 ########################
-LANGUAGE_ARRAY_FOR_LINTER_RULES=("${LANGUAGE_ARRAY[@]}" "TYPESCRIPT_STANDARD_TSCONFIG")
-
 for LANGUAGE in "${LANGUAGE_ARRAY_FOR_LINTER_RULES[@]}"; do
   debug "Loading rules for ${LANGUAGE}..."
   eval "GetLinterRules ${LANGUAGE} ${DEFAULT_RULES_LOCATION}"
@@ -891,216 +819,102 @@ done
 # Load rules for special cases
 GetStandardRules "javascript"
 
-##########################
-# Define linter commands #
-##########################
-declare -A LINTER_COMMANDS_ARRAY
-LINTER_COMMANDS_ARRAY['ANSIBLE']="ansible-lint -c ${ANSIBLE_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['ARM']="Import-Module ${ARM_TTK_PSD1} ; \${config} = \$(Import-PowerShellDataFile -Path ${ARM_LINTER_RULES}) ; Test-AzTemplate @config -TemplatePath"
-if [ -z "${BASH_SEVERITY}" ]; then
-  LINTER_COMMANDS_ARRAY['BASH']="shellcheck --color --external-sources"
-else
-  LINTER_COMMANDS_ARRAY['BASH']="shellcheck --color --external-sources --severity=${BASH_SEVERITY}"
-fi
-LINTER_COMMANDS_ARRAY['BASH_EXEC']="bash-exec"
-LINTER_COMMANDS_ARRAY['CLANG_FORMAT']="clang-format --Werror --dry-run"
-LINTER_COMMANDS_ARRAY['CLOJURE']="clj-kondo --config ${CLOJURE_LINTER_RULES} --lint"
-LINTER_COMMANDS_ARRAY['CLOUDFORMATION']="cfn-lint --config-file ${CLOUDFORMATION_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['COFFEESCRIPT']="coffeelint -f ${COFFEESCRIPT_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['CPP']="cpplint"
-LINTER_COMMANDS_ARRAY['CSHARP']="dotnet format whitespace --folder --verify-no-changes --exclude / --include"
-LINTER_COMMANDS_ARRAY['CSS']="stylelint --config ${CSS_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['DART']="dartanalyzer --fatal-infos --fatal-warnings --options ${DART_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['DOCKERFILE_HADOLINT']="hadolint -c ${DOCKERFILE_HADOLINT_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['EDITORCONFIG']="editorconfig-checker -config ${EDITORCONFIG_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['ENV']="dotenv-linter"
-if [ "${GITHUB_ACTIONS_COMMAND_ARGS}" = "null" ]; then
-  LINTER_COMMANDS_ARRAY['GITHUB_ACTIONS']="actionlint -config-file ${GITHUB_ACTIONS_LINTER_RULES}"
-else
-  LINTER_COMMANDS_ARRAY['GITHUB_ACTIONS']="actionlint -config-file ${GITHUB_ACTIONS_LINTER_RULES} ${GITHUB_ACTIONS_COMMAND_ARGS}"
-fi
-LINTER_COMMANDS_ARRAY['GITLEAKS']="gitleaks detect --no-banner --no-git -c ${GITLEAKS_LINTER_RULES} -v -s"
-LINTER_COMMANDS_ARRAY['GHERKIN']="gherkin-lint -c ${GHERKIN_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['GO']="golangci-lint run --fast -c ${GO_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['GOOGLE_JAVA_FORMAT']="java -jar /usr/bin/google-java-format --dry-run --set-exit-if-changed"
-LINTER_COMMANDS_ARRAY['GROOVY']="npm-groovy-lint -c ${GROOVY_LINTER_RULES} --failon warning --no-insight"
-LINTER_COMMANDS_ARRAY['HTML']="htmlhint --config ${HTML_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['JAVA']="java -jar /usr/bin/checkstyle -c ${JAVA_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['JAVASCRIPT_ES']="eslint --no-eslintrc -c ${JAVASCRIPT_ES_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['JAVASCRIPT_STANDARD']="standard ${JAVASCRIPT_STANDARD_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['JAVASCRIPT_PRETTIER']="prettier --check"
-LINTER_COMMANDS_ARRAY['JSCPD']="jscpd --config ${JSCPD_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['JSON']="eslint --no-eslintrc -c ${JAVASCRIPT_ES_LINTER_RULES} --ext .json"
-LINTER_COMMANDS_ARRAY['JSONC']="eslint --no-eslintrc -c ${JAVASCRIPT_ES_LINTER_RULES} --ext .json5,.jsonc"
-LINTER_COMMANDS_ARRAY['JSX']="eslint --no-eslintrc -c ${JSX_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['KOTLIN']="ktlint"
-LINTER_COMMANDS_ARRAY['KOTLIN_ANDROID']="ktlint --android"
-if [ "${KUBERNETES_KUBECONFORM_OPTIONS}" == "null" ] || [ -z "${KUBERNETES_KUBECONFORM_OPTIONS}" ]; then
-  LINTER_COMMANDS_ARRAY['KUBERNETES_KUBECONFORM']="kubeconform -strict"
-else
-  LINTER_COMMANDS_ARRAY['KUBERNETES_KUBECONFORM']="kubeconform -strict ${KUBERNETES_KUBECONFORM_OPTIONS}"
-fi
-LINTER_COMMANDS_ARRAY['LATEX']="chktex -q -l ${LATEX_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['LUA']="luacheck --config ${LUA_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['MARKDOWN']="markdownlint -c ${MARKDOWN_LINTER_RULES}"
-if [ -n "${MARKDOWN_CUSTOM_RULE_GLOBS}" ]; then
-  IFS="," read -r -a MARKDOWN_CUSTOM_RULE_GLOBS_ARRAY <<<"${MARKDOWN_CUSTOM_RULE_GLOBS}"
-  for glob in "${MARKDOWN_CUSTOM_RULE_GLOBS_ARRAY[@]}"; do
-    if [ -z "${LINTER_RULES_PATH}" ]; then
-      LINTER_COMMANDS_ARRAY['MARKDOWN']="${LINTER_COMMANDS_ARRAY['MARKDOWN']} -r ${GITHUB_WORKSPACE}/${glob}"
-    else
-      LINTER_COMMANDS_ARRAY['MARKDOWN']="${LINTER_COMMANDS_ARRAY['MARKDOWN']} -r ${GITHUB_WORKSPACE}/${LINTER_RULES_PATH}/${glob}"
-    fi
-  done
-fi
-LINTER_COMMANDS_ARRAY['NATURAL_LANGUAGE']="textlint -c ${NATURAL_LANGUAGE_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['OPENAPI']="spectral lint -r ${OPENAPI_LINTER_RULES} -D"
-if [ "${PERL_PERLCRITIC_OPTIONS}" == "null" ] || [ -z "${PERL_PERLCRITIC_OPTIONS}" ]; then
-  LINTER_COMMANDS_ARRAY['PERL']="perlcritic"
-else
-  LINTER_COMMANDS_ARRAY['PERL']="perlcritic ${PERL_PERLCRITIC_OPTIONS}"
-fi
-LINTER_COMMANDS_ARRAY['PHP_BUILTIN']="php -l -c ${PHP_BUILTIN_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['PHP_PHPCS']="phpcs --standard=${PHP_PHPCS_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['PHP_PHPSTAN']="phpstan analyse --no-progress --no-ansi --memory-limit 1G -c ${PHP_PHPSTAN_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['PHP_PSALM']="psalm --config=${PHP_PSALM_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['POWERSHELL']="Invoke-ScriptAnalyzer -EnableExit -Settings ${POWERSHELL_LINTER_RULES} -Path"
-LINTER_COMMANDS_ARRAY['PROTOBUF']="protolint lint --config_path ${PROTOBUF_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['PYTHON_BLACK']="black --config ${PYTHON_BLACK_LINTER_RULES} --diff --check"
-LINTER_COMMANDS_ARRAY['PYTHON_PYLINT']="pylint --rcfile ${PYTHON_PYLINT_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['PYTHON_FLAKE8']="flake8 --config=${PYTHON_FLAKE8_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['PYTHON_ISORT']="isort --check --diff --sp ${PYTHON_ISORT_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['PYTHON_MYPY']="mypy --config-file ${PYTHON_MYPY_LINTER_RULES} --install-types --non-interactive"
-LINTER_COMMANDS_ARRAY['R']="lintr"
-LINTER_COMMANDS_ARRAY['RAKU']="raku"
-LINTER_COMMANDS_ARRAY['RENOVATE']="renovate-config-validator --strict"
-LINTER_COMMANDS_ARRAY['RUBY']="rubocop -c ${RUBY_LINTER_RULES} --force-exclusion --ignore-unrecognized-cops"
-LINTER_COMMANDS_ARRAY['RUST_2015']="rustfmt --check --edition 2015"
-LINTER_COMMANDS_ARRAY['RUST_2018']="rustfmt --check --edition 2018"
-LINTER_COMMANDS_ARRAY['RUST_2021']="rustfmt --check --edition 2021"
-LINTER_COMMANDS_ARRAY['RUST_CLIPPY']="clippy"
-LINTER_COMMANDS_ARRAY['SCALAFMT']="scalafmt --config ${SCALAFMT_LINTER_RULES} --test"
-LINTER_COMMANDS_ARRAY['SHELL_SHFMT']="shfmt -d"
-LINTER_COMMANDS_ARRAY['SNAKEMAKE_LINT']="snakemake --lint -s"
-LINTER_COMMANDS_ARRAY['SNAKEMAKE_SNAKEFMT']="snakefmt --config ${SNAKEMAKE_SNAKEFMT_LINTER_RULES} --check --compact-diff"
-LINTER_COMMANDS_ARRAY['STATES']="asl-validator --json-path"
-LINTER_COMMANDS_ARRAY['SQL']="sql-lint --config ${SQL_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['SQLFLUFF']="sqlfluff lint --config ${SQLFLUFF_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['TEKTON']="tekton-lint"
-LINTER_COMMANDS_ARRAY['TERRAFORM_FMT']="terraform fmt -check -diff"
-LINTER_COMMANDS_ARRAY['TERRAFORM_TFLINT']="tflint -c ${TERRAFORM_TFLINT_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['TERRAFORM_TERRASCAN']="terrascan scan -i terraform -t all -c ${TERRAFORM_TERRASCAN_LINTER_RULES} -f"
-LINTER_COMMANDS_ARRAY['TERRAGRUNT']="terragrunt hclfmt --terragrunt-check --terragrunt-log-level error --terragrunt-hclfmt-file"
-LINTER_COMMANDS_ARRAY['TSX']="eslint --no-eslintrc -c ${TSX_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['TYPESCRIPT_ES']="eslint --no-eslintrc -c ${TYPESCRIPT_ES_LINTER_RULES}"
-LINTER_COMMANDS_ARRAY['TYPESCRIPT_STANDARD']="ts-standard --parser @typescript-eslint/parser --plugin @typescript-eslint/eslint-plugin --project ${TYPESCRIPT_STANDARD_TSCONFIG_FILE}"
-LINTER_COMMANDS_ARRAY['TYPESCRIPT_PRETTIER']="prettier --check"
-LINTER_COMMANDS_ARRAY['XML']="xmllint"
-if [ "${YAML_ERROR_ON_WARNING}" == 'false' ]; then
-  LINTER_COMMANDS_ARRAY['YAML']="yamllint -c ${YAML_LINTER_RULES} -f parsable"
-else
-  LINTER_COMMANDS_ARRAY['YAML']="yamllint --strict -c ${YAML_LINTER_RULES} -f parsable"
-fi
+#############################################################################
+# Validate the environment that depends on linter rules variables being set #
+#############################################################################
 
-debug "--- Linter commands ---"
-debug "-----------------------"
-for i in "${!LINTER_COMMANDS_ARRAY[@]}"; do
-  debug "Linter key: $i, command: ${LINTER_COMMANDS_ARRAY[$i]}"
-done
-debug "---------------------------------------------"
+# We need the variables defined in linterCommandsOptions to initialize FIX_....
+# variables.
+# shellcheck source=/dev/null
+source /action/lib/globals/linterCommandsOptions.sh
+if ! ValidateCheckModeAndFixModeVariables; then
+  fatal "Error while validating the configuration fix mode for linters that support that"
+fi
 
 #################################
 # Check for SSL cert and update #
 #################################
 CheckSSLCert
 
-# Check if we need to lint the whole codebase with JSCPD
-VALIDATE_JSCPD_ALL_CODEBASE="${VALIDATE_JSCPD_ALL_CODEBASE:-"false"}"
-export VALIDATE_JSCPD_ALL_CODEBASE
-debug "VALIDATE_JSCPD_ALL_CODEBASE: ${VALIDATE_JSCPD_ALL_CODEBASE}"
-
 ###########################################
 # Build the list of files for each linter #
 ###########################################
-BuildFileList "${VALIDATE_ALL_CODEBASE}" "${TEST_CASE_RUN}" "${ANSIBLE_DIRECTORY}"
+BuildFileList "${VALIDATE_ALL_CODEBASE}" "${TEST_CASE_RUN}"
 
 #####################################
 # Run additional Installs as needed #
 #####################################
 RunAdditionalInstalls
 
+endGitHubActionsLogGroup "${AWESOME_LINTER_INITIALIZATION_LOG_GROUP_TITLE}"
+
 ###############
 # Run linters #
 ###############
-EDITORCONFIG_FILE_PATH="${GITHUB_WORKSPACE}"/.editorconfig
+declare PARALLEL_RESULTS_FILE_PATH
+PARALLEL_RESULTS_FILE_PATH="${AWESOME_LINTER_PRIVATE_OUTPUT_DIRECTORY_PATH}/awesome-linter-results.json"
+debug "PARALLEL_RESULTS_FILE_PATH: ${PARALLEL_RESULTS_FILE_PATH}"
 
-####################################
-# Print ENV before running linters #
-####################################
-debug "--- ENV (before running linters) ---"
-debug "------------------------------------"
-PRINTENV=$(printenv | sort)
-debug "ENV:"
-debug "${PRINTENV}"
-debug "------------------------------------"
+declare -i LINTING_MAX_PROCS
+LINTING_MAX_PROCS=$(nproc)
 
-if [ "${EXPERIMENTAL_BATCH_WORKER}" == "true" ]; then
-  # we have showed citation once, so every other parallel call will use --will-cite
-  info parallel --citation
-else
-  EXPERIMENTAL_BATCH_WORKER="false"
+CheckIfFixModeIsEnabled
+if [[ "${FIX_MODE_ENABLED}" == "true" ]]; then
+  # This slows down the fix process, but avoids that linters that work on the same
+  # types of files try opening the same file at the same time
+  LINTING_MAX_PROCS=1
+  debug "Set LINTING_MAX_PROCS to ${LINTING_MAX_PROCS} to avoid that linters and formatters edit the same file at the same time."
 fi
 
-for LANGUAGE in "${LANGUAGE_ARRAY[@]}"; do
-  debug "Running linter for the ${LANGUAGE} language..."
-  VALIDATE_LANGUAGE_VARIABLE_NAME="VALIDATE_${LANGUAGE}"
-  debug "Setting VALIDATE_LANGUAGE_VARIABLE_NAME to ${VALIDATE_LANGUAGE_VARIABLE_NAME}..."
-  VALIDATE_LANGUAGE_VARIABLE_VALUE="${!VALIDATE_LANGUAGE_VARIABLE_NAME}"
-  debug "Setting VALIDATE_LANGUAGE_VARIABLE_VALUE to ${VALIDATE_LANGUAGE_VARIABLE_VALUE}..."
+declare -a PARALLEL_COMMAND
+PARALLEL_COMMAND=(parallel --will-cite --keep-order --max-procs "$((LINTING_MAX_PROCS))" --xargs --results "${PARALLEL_RESULTS_FILE_PATH}")
 
-  if [ "${VALIDATE_LANGUAGE_VARIABLE_VALUE}" = "true" ]; then
-    # Check if we need an .editorconfig file
-    # shellcheck disable=SC2153
-    if [ "${LANGUAGE}" = "EDITORCONFIG" ] || [ "${LANGUAGE}" = "SHELL_SHFMT" ]; then
-      if [ -e "${EDITORCONFIG_FILE_PATH}" ]; then
-        debug "Found an EditorConfig file at ${EDITORCONFIG_FILE_PATH}"
-      else
-        debug "No .editorconfig found at: $EDITORCONFIG_FILE_PATH. Skipping ${LANGUAGE} linting..."
-        continue
-      fi
-    elif [ "${LANGUAGE}" = "R" ] && [ ! -f "${GITHUB_WORKSPACE}/.lintr" ] && ((${#FILE_ARRAY_R[@]})); then
-      info "No .lintr configuration file found, using defaults."
-      cp "$R_LINTER_RULES" "$GITHUB_WORKSPACE"
-    # Check if there's local configuration for the Raku linter
-    elif [ "${LANGUAGE}" = "RAKU" ] && [ -e "${GITHUB_WORKSPACE}/META6.json" ]; then
-      cd "${GITHUB_WORKSPACE}" && zef install --deps-only --/test .
-    fi
+# Run one LANGUAGE per process. Each of these processes will run more processees in parellel if supported
+PARALLEL_COMMAND+=(--max-lines 1)
 
-    LINTER_NAME="${LINTER_NAMES_ARRAY["${LANGUAGE}"]}"
-    if [ -z "${LINTER_NAME}" ]; then
-      fatal "Cannot find the linter name for ${LANGUAGE} language."
-    else
-      debug "Setting LINTER_NAME to ${LINTER_NAME}..."
-    fi
+if [ "${LOG_DEBUG}" == "true" ]; then
+  debug "LOG_DEBUG is enabled. Enable verbose ouput for parallel"
+  PARALLEL_COMMAND+=(--verbose)
+fi
 
-    LINTER_COMMAND="${LINTER_COMMANDS_ARRAY["${LANGUAGE}"]}"
-    if [ -z "${LINTER_COMMAND}" ]; then
-      fatal "Cannot find the linter command for ${LANGUAGE} language."
-    else
-      debug "Setting LINTER_COMMAND to ${LINTER_COMMAND}..."
-    fi
+PARALLEL_COMMAND+=("LintCodebase" "{}" "\"${TEST_CASE_RUN}\"")
+debug "PARALLEL_COMMAND: ${PARALLEL_COMMAND[*]}"
 
-    FILE_ARRAY_VARIABLE_NAME="FILE_ARRAY_${LANGUAGE}"
-    debug "Setting FILE_ARRAY_VARIABLE_NAME to ${FILE_ARRAY_VARIABLE_NAME}..."
+PARALLEL_COMMAND_OUTPUT=$(printf "%s\n" "${LANGUAGE_ARRAY[@]}" | "${PARALLEL_COMMAND[@]}" 2>&1)
+PARALLEL_COMMAND_RETURN_CODE=$?
+debug "PARALLEL_COMMAND_OUTPUT when running linters (exit code: ${PARALLEL_COMMAND_RETURN_CODE}):\n${PARALLEL_COMMAND_OUTPUT}"
+debug "Parallel output file (${PARALLEL_RESULTS_FILE_PATH}) contents when running linters:\n$(cat "${PARALLEL_RESULTS_FILE_PATH}")"
 
-    # shellcheck disable=SC2125
-    LANGUAGE_FILE_ARRAY="${FILE_ARRAY_VARIABLE_NAME}"[@]
-    debug "${FILE_ARRAY_VARIABLE_NAME} file array contents: ${!LANGUAGE_FILE_ARRAY}"
+RESULTS_OBJECT=
+if ! RESULTS_OBJECT=$(jq --raw-output -n '[inputs]' "${PARALLEL_RESULTS_FILE_PATH}"); then
+  fatal "Error loading results when building the file list: ${RESULTS_OBJECT}"
+fi
+debug "RESULTS_OBJECT when running linters:\n${RESULTS_OBJECT}"
 
-    debug "Invoking ${LINTER_NAME} linter. TEST_CASE_RUN: ${TEST_CASE_RUN}"
-    LintCodebase "${LANGUAGE}" "${LINTER_NAME}" "${LINTER_COMMAND}" "${FILTER_REGEX_INCLUDE}" "${FILTER_REGEX_EXCLUDE}" "${TEST_CASE_RUN}" "${EXPERIMENTAL_BATCH_WORKER}" "${!LANGUAGE_FILE_ARRAY}"
-  fi
-done
+# Get raw output so we can strip quotes from the data we load. Also, strip the final newline to avoid adding it two times
+if ! STDOUT_LINTERS="$(jq --raw-output '.[] | select(.Stdout[:-1] | length > 0) | .Stdout[:-1]' <<<"${RESULTS_OBJECT}")"; then
+  fatal "Error when loading stdout when running linters:\n${STDOUT_LINTERS}"
+fi
+
+if [ -n "${STDOUT_LINTERS}" ]; then
+  info "Command output when running linters:\n------\n${STDOUT_LINTERS}\n------"
+else
+  debug "Stdout when running linters is empty"
+fi
+
+if ! STDERR_LINTERS="$(jq --raw-output '.[] | select(.Stderr[:-1] | length > 0) | .Stderr[:-1]' <<<"${RESULTS_OBJECT}")"; then
+  fatal "Error when loading stderr for ${FILE_TYPE}:\n${STDERR_LINTERS}"
+fi
+
+if [ -n "${STDERR_LINTERS}" ]; then
+  info "Stderr when running linters:\n------\n${STDERR_LINTERS}\n------"
+else
+  debug "Stderr when running linters is empty"
+fi
+
+if [[ ${PARALLEL_COMMAND_RETURN_CODE} -ne 0 ]]; then
+  fatal "Error when running linters. Exit code: ${PARALLEL_COMMAND_RETURN_CODE}"
+fi
 
 ##########
 # Footer #

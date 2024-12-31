@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/devcontainers/spec/main/schemas/devContainer.schema.json",
-  "name": "Super-Linter",
+  "name": "Awesome-Linter",
   "image": "ghcr.io/khulnasoft-lab/awesome-linter:latest",
   "customizations": {
     "vscode": {

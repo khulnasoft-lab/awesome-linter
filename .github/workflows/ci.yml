@@ -148,7 +148,7 @@ jobs:
           make info
 
       - name: Upload ${{ env.CONTAINER_IMAGE_OUTPUT_IMAGE_NAME }} container image
-        uses: actions/upload-artifact@v4.5.0
+        uses: actions/upload-artifact@v4.4.3
         with:
           name: ${{ env.CONTAINER_IMAGE_OUTPUT_IMAGE_NAME }}
           path: /tmp/${{ env.CONTAINER_IMAGE_OUTPUT_IMAGE_NAME }}.tar
@@ -253,6 +253,9 @@ jobs:
       - build-container-image
       - build-test-suite-matrix
     strategy:
+      # Continue running the rest of the test suite so we get feedback even if
+      # there are failures in certain tests, such as when running npm-audit
+      fail-fast: false
       matrix:
         test-case: ${{ fromJson(needs.build-test-suite-matrix.outputs.matrix) }}
         images:
@@ -318,7 +321,7 @@ jobs:
         run: exit 1
 
   preview-release-notes:
-    if: github.event_name == 'pull_request' && github.repository == github.event.pull_request.head.repo.full_name && github.repository == 'awesome-linter/awesome-linter'
+    if: github.event_name == 'pull_request' && github.repository == github.event.pull_request.head.repo.full_name && github.repository == 'khulnasoft-lab/awesome-linter'
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -1,0 +1,121 @@
+---
+name: Bug report
+description: Create a bug report
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+  - type: checkboxes
+    attributes:
+      label: Is there an existing issue for this?
+      description: Search to see if an issue already exists for the bug you encountered.
+      options:
+        - label: I have searched the existing issues
+          required: true
+  - type: checkboxes
+    attributes:
+      label: Are you using the latest Awesome-linter version available?
+      description: |
+        Ensure that you're using the latest Awesome-linter version.
+        https://github.com/khulnasoft-lab/awesome-linter/releases/latest
+      options:
+        - label: I am using the latest Awesome-linter version.
+          required: true
+        - label: |
+            I can reproduce the issue running Awesome-linter using complete version identifier (example: vX.Y.Z), and not just with a partial one (example: vX)
+          required: true
+        - label: |
+            I am using the khulnasoft-lab/awesome-linter action or container image, and not the deprecated github/awesome-linter action or container image.
+          required: true
+  - type: checkboxes
+    attributes:
+      label: Are you resonably sure that it's a Awesome-linter issue, and not an issue related to a tool that Awesome-linter runs?
+      description: |
+        If you encounter a specific issue, ensure that the issue is about
+        Awesome-linter, and not about a tool that Awesome-linter runs. For example,
+        if a linter reports an unexpected or a surprising error, you may check
+        if there are similar issues reported in that linter's issue tracker.
+      options:
+        - label: I think that this is a Awesome-linter issue.
+          required: true
+  - type: textarea
+    attributes:
+      label: Current Behavior
+      description: A concise description of what you're experiencing.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Expected Behavior
+      description: A concise description of what you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Awesome-Linter version
+      description: |
+        Awesome-Linter version where you observed this issue
+      placeholder: |
+        vX.Y.Z
+      render: markdown
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Awesome-linter configuration
+      description: |
+        How you configured Awesome-linter to experience the issue.
+        If running on GitHub Actions, include the actions/checkout step
+        as well.
+      placeholder: |
+        - name: Checkout code
+          uses: actions/checkout@v4
+          with:
+            fetch-depth: 0
+
+        - name: Awesome-linter
+          uses: khulnasoft-lab/awesome-linter@vX.Y.Z
+          env:
+            # To report GitHub Actions status checks
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            ........
+            ........
+      render: yaml
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: |
+        Copy and paste any relevant log output.
+        This will be automatically formatted into code, so no need for backticks.
+        Enable debug logging, either on GitHub Actions, or when running locally.
+        Not attaching debug logging will delay the issue triaging process.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Steps To Reproduce
+      description: |
+        Steps to reproduce the issue.
+        To speed up the triaging of your request, reproduce the issue running
+        Awesome-Linter locally: https://github.com/khulnasoft-lab/awesome-linter/blob/main/docs/run-linter-locally.md
+      placeholder: |
+        1. In this environment...
+        1. With this config...
+        1. Run '...'
+        1. See error...
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Anything else?
+      description: |
+        Links? References? Anything that will give us more context about the issue you are encountering!
+    validations:
+      required: false

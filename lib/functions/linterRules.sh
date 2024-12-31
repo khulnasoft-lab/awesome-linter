@@ -1,14 +1,5 @@
 #!/usr/bin/env bash
 
-:
-:
-########### Awesome-Linter linting Functions @admiralawkbar ######################
-:
-:
-########################## FUNCTION CALLS BELOW ################################
-:
-:
-#### Function LinterRulesLocation ##############################################
 LinterRulesLocation() {
   # We need to see if the user has set the rules location to the root
   # directory, or to some nested folder
@@ -16,7 +7,7 @@ LinterRulesLocation() {
     LINTER_RULES_PATH=''
   fi
 }
-:
+################################################################################
 #### Function GetLinterRules ###################################################
 GetLinterRules() {
   # Need to validate the rules files exist
@@ -47,31 +38,6 @@ GetLinterRules() {
 
   debug "Initializing LANGUAGE_LINTER_RULES value to an empty string..."
   eval "${LANGUAGE_LINTER_RULES}="
-
-  ##########################
-  # Get the file extension #
-  ##########################
-  FILE_EXTENSION=$(echo "${!LANGUAGE_FILE_NAME}" | rev | cut -d'.' -f1 | rev)
-  FILE_NAME=$(basename "${!LANGUAGE_FILE_NAME}" ".${FILE_EXTENSION}")
-  debug "${LANGUAGE_NAME} language rule file (${!LANGUAGE_FILE_NAME}) has ${FILE_NAME} name and ${FILE_EXTENSION} extension"
-
-  ########################################
-  # Set the secondary file name and path #
-  ########################################
-  debug "Initializing SECONDARY_FILE_NAME and SECONDARY_LANGUAGE_FILE_PATH..."
-  SECONDARY_FILE_NAME=''
-  SECONDARY_LANGUAGE_FILE_PATH=
-
-  #################################
-  # Check for secondary file name #
-  #################################
-  if [[ $FILE_EXTENSION == 'yml' ]]; then
-    # Need to see if yaml also exists
-    SECONDARY_FILE_NAME="$FILE_NAME.yaml"
-  elif [[ $FILE_EXTENSION == 'yaml' ]]; then
-    # need to see if yml also exists
-    SECONDARY_FILE_NAME="$FILE_NAME.yml"
-  fi
 
   ###############################
   # Set Flag for set Rules File #
@@ -106,34 +72,6 @@ GetLinterRules() {
     debug "  -> Codebase does NOT have file:[${LANGUAGE_FILE_PATH}]."
   fi
 
-  ####################################################
-  # Check if we have secondary file name to look for #
-  ####################################################
-  if [ -n "$SECONDARY_FILE_NAME" ] && [ "${SET_RULES}" -eq 0 ]; then
-    # Set the path
-    SECONDARY_LANGUAGE_FILE_PATH=''
-    if [ -z "${LINTER_RULES_PATH}" ]; then
-      SECONDARY_LANGUAGE_FILE_PATH="${GITHUB_WORKSPACE}/${SECONDARY_FILE_NAME}"
-    else
-      SECONDARY_LANGUAGE_FILE_PATH="${GITHUB_WORKSPACE}/${LINTER_RULES_PATH}/${SECONDARY_FILE_NAME}"
-    fi
-    debug "${LANGUAGE_NAME} language rule file has a secondary rules file name to check (${SECONDARY_FILE_NAME}). Path:[${SECONDARY_LANGUAGE_FILE_PATH}]"
-
-    if [ -f "${SECONDARY_LANGUAGE_FILE_PATH}" ]; then
-      info "----------------------------------------------"
-      info "User provided file:[${SECONDARY_LANGUAGE_FILE_PATH}] exists, setting rules file..."
-
-      ########################################
-      # Update the path to the file location #
-      ########################################
-      eval "${LANGUAGE_LINTER_RULES}=${SECONDARY_LANGUAGE_FILE_PATH}"
-      ######################
-      # Set the rules flag #
-      ######################
-      SET_RULES=1
-    fi
-  fi
-
   ##############################################################
   # We didnt find rules from user, setting to default template #
   ##############################################################
@@ -142,7 +80,7 @@ GetLinterRules() {
     # No user default provided, using the template default #
     ########################################################
     eval "${LANGUAGE_LINTER_RULES}=${DEFAULT_RULES_LOCATION}/${!LANGUAGE_FILE_NAME}"
-    debug "  -> Codebase does NOT have file:[${LANGUAGE_FILE_PATH}], nor the file:[${SECONDARY_LANGUAGE_FILE_PATH}], using Default rules at:[${!LANGUAGE_LINTER_RULES}]"
+    debug "  -> Codebase does NOT have file:[${LANGUAGE_FILE_PATH}], using default rules at:[${!LANGUAGE_LINTER_RULES}]"
     ######################
     # Set the rules flag #
     ######################
@@ -161,8 +99,20 @@ GetLinterRules() {
     # Found the rules file
     debug "  -> ${LANGUAGE_LINTER_RULES} rules file (${!LANGUAGE_LINTER_RULES}) exists."
   else
-    # Here we expect a rules file, so fail if not available.
-    fatal "  -> ${LANGUAGE_LINTER_RULES} rules file (${!LANGUAGE_LINTER_RULES}) doesn't exist. Terminating..."
+    local LANGUAGE_LINTER_RULES_BASENAME
+    LANGUAGE_LINTER_RULES_BASENAME="$(basename "${!LANGUAGE_LINTER_RULES}")"
+    debug "LANGUAGE_LINTER_RULES_BASENAME: ${LANGUAGE_LINTER_RULES_BASENAME}"
+    # checkstyle embeds some configuration files, such as google_checks.xml and sun_checks.xml.
+    # If we or the user specified one of those files and the file is missing, fall back to
+    # the embedded one.
+    if [[ "${LANGUAGE_NAME}" == "JAVA" && ("${LANGUAGE_LINTER_RULES_BASENAME}" == "google_checks.xml" || "${LANGUAGE_LINTER_RULES_BASENAME}" == "sun_checks.xml") ]]; then
+      debug "${!LANGUAGE_LINTER_RULES} for ${LANGUAGE_NAME} doesn't exist. Falling back to ${LANGUAGE_LINTER_RULES_BASENAME} that the linter ships."
+      eval "${LANGUAGE_LINTER_RULES}=/${LANGUAGE_LINTER_RULES_BASENAME}"
+      debug "Updated ${LANGUAGE_LINTER_RULES}: ${!LANGUAGE_LINTER_RULES}"
+    else
+      # Here we expect a rules file, so fail if not available.
+      fatal "  -> ${LANGUAGE_LINTER_RULES} rules file (${!LANGUAGE_LINTER_RULES}) doesn't exist. Terminating..."
+    fi
   fi
 
   ######################
@@ -170,7 +120,7 @@ GetLinterRules() {
   ######################
   eval "export ${LANGUAGE_LINTER_RULES}"
 }
-:
+################################################################################
 #### Function GetStandardRules #################################################
 GetStandardRules() {
   ################
@@ -178,9 +128,9 @@ GetStandardRules() {
   ################
   LINTER="${1}"
 
-  
+  #########################################################################
   # Need to get the ENV vars from the linter rules to run in command line #
-  
+  #########################################################################
   # Copy orig IFS to var
   ORIG_IFS="${IFS}"
   # Set the IFS to newline
@@ -191,22 +141,8 @@ GetStandardRules() {
   #########################################
   # Only env vars that are marked as true
   GET_ENV_ARRAY=()
-  if [[ ${LINTER} == "javascript" ]]; then
-    mapfile -t GET_ENV_ARRAY < <(yq .env "${JAVASCRIPT_STANDARD_LINTER_RULES}" | grep true)
-  fi
-
-  #######################
-  # Load the error code #
-  #######################
-  ERROR_CODE=$?
-
-  ##############################
-  # Check the shell for errors #
-  ##############################
-  if [ ${ERROR_CODE} -ne 0 ]; then
-    # ERROR
-    error "Failed to gain list of ENV vars to load!"
-    fatal "[${GET_ENV_ARRAY[*]}]"
+  if [[ ${LINTER} == "javascript" ]] && ! mapfile -t GET_ENV_ARRAY < <(yq .env "${JAVASCRIPT_STANDARD_LINTER_RULES}" | grep true); then
+    fatal "Failed to gain list of ENV vars to load: [${GET_ENV_ARRAY[*]}]"
   fi
 
   ##########################
@@ -215,14 +151,8 @@ GetStandardRules() {
   # Set IFS back to Orig
   IFS="${ORIG_IFS}"
 
-  ######################
-  # Set the env string #
-  ######################
   ENV_STRING=''
 
-  #############################
-  # Pull out the envs to load #
-  #############################
   for ENV in "${GET_ENV_ARRAY[@]}"; do
     #############################
     # remove spaces from return #

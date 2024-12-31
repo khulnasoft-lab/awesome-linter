@@ -1,20 +1,17 @@
 #!/usr/bin/env bash
 
-:
-:
-########### Awesome-Linter linting Functions @admiralawkbar ######################
-:
-:
-########################## FUNCTION CALLS BELOW ################################
-:
-#### Function DetectActions ####################################################
 DetectActions() {
   FILE="${1}"
+
+  if [ "${VALIDATE_GITHUB_ACTIONS}" == "false" ]; then
+    debug "Don't check if ${FILE} is a GitHub Actions file because VALIDATE_GITHUB_ACTIONS is: ${VALIDATE_GITHUB_ACTIONS}"
+    return 1
+  fi
 
   debug "Checking if ${FILE} is a GitHub Actions file..."
 
   # Check if in the users .github, or the awesome linter test suite
-  if [[ "$(dirname "${FILE}")" == *".github/workflows"* ]] || [[ "$(dirname "${FILE}")" == *".automation/test/github_actions"* ]]; then
+  if [[ "$(dirname "${FILE}")" == *".github/workflows"* ]] || [[ "$(dirname "${FILE}")" == *"${TEST_CASE_FOLDER}/github_actions"* ]]; then
     debug "${FILE} is GitHub Actions file."
     return 0
   else
@@ -22,29 +19,18 @@ DetectActions() {
     return 1
   fi
 }
-:
-#### Function DetectOpenAPIFile ################################################
+
 DetectOpenAPIFile() {
-  ################
-  # Pull in vars #
-  ################
   FILE="${1}"
+
+  if [ "${VALIDATE_OPENAPI}" == "false" ]; then
+    debug "Don't check if ${FILE} is an OpenAPI file because VALIDATE_OPENAPI is: ${VALIDATE_OPENAPI}"
+    return 1
+  fi
+
   debug "Checking if ${FILE} is an OpenAPI file..."
 
-  ###############################
-  # Check the file for keywords #
-  ###############################
-  grep -E '"openapi":|"swagger":|^openapi:|^swagger:' "${FILE}" >/dev/null
-
-  #######################
-  # Load the error code #
-  #######################
-  ERROR_CODE=$?
-
-  ##############################
-  # Check the shell for errors #
-  ##############################
-  if [ ${ERROR_CODE} -eq 0 ]; then
+  if grep -E '"openapi":|"swagger":|^openapi:|^swagger:' "${FILE}" >/dev/null; then
     debug "${FILE} is an OpenAPI descriptor"
     return 0
   else
@@ -52,113 +38,75 @@ DetectOpenAPIFile() {
     return 1
   fi
 }
-:
-#### Function DetectTektonFile #################################################
+
 DetectTektonFile() {
-  ################
-  # Pull in vars #
-  ################
   FILE="${1}"
+
+  if [ "${VALIDATE_TEKTON}" == "false" ]; then
+    debug "Don't check if ${FILE} is a Tekton file because VALIDATE_TEKTON is: ${VALIDATE_TEKTON}"
+    return 1
+  fi
+
   debug "Checking if ${FILE} is a Tekton file..."
 
-  ###############################
-  # Check the file for keywords #
-  ###############################
-  grep -q -E 'apiVersion: tekton' "${FILE}" >/dev/null
-
-  #######################
-  # Load the error code #
-  #######################
-  ERROR_CODE=$?
-
-  ##############################
-  # Check the shell for errors #
-  ##############################
-  if [ ${ERROR_CODE} -eq 0 ]; then
-    ########################
-    # Found string in file #
-    ########################
+  if grep -q -E 'apiVersion: tekton' "${FILE}" >/dev/null; then
     return 0
   else
-    ###################
-    # No string match #
-    ###################
     return 1
   fi
 }
-:
-#### Function DetectARMFile ####################################################
+
 DetectARMFile() {
-  ################
-  # Pull in vars #
-  ################
-  FILE="${1}" # Name of the file/path we are validating
+  FILE="${1}"
+
+  if [ "${VALIDATE_ARM}" == "false" ]; then
+    debug "Don't check if ${FILE} is an ARM file because VALIDATE_ARM is: ${VALIDATE_ARM}"
+    return 1
+  fi
+
   debug "Checking if ${FILE} is an ARM file..."
 
-  ###############################
-  # Check the file for keywords #
-  ###############################
-  grep -E 'schema.management.azure.com' "${FILE}" >/dev/null
-
-  #######################
-  # Load the error code #
-  #######################
-  ERROR_CODE=$?
-
-  ##############################
-  # Check the shell for errors #
-  ##############################
-  if [ ${ERROR_CODE} -eq 0 ]; then
-    ########################
-    # Found string in file #
-    ########################
+  if grep -E 'schema.management.azure.com' "${FILE}" >/dev/null; then
     return 0
   else
-    ###################
-    # No string match #
-    ###################
     return 1
   fi
 }
-:
-#### Function DetectCloudFormationFile #########################################
+
 DetectCloudFormationFile() {
-  ################
-  # Pull in Vars #
-  ################
-  FILE="${1}" # File that we need to validate
+  FILE="${1}"
+
+  if [ "${VALIDATE_CLOUDFORMATION}" == "false" ]; then
+    debug "Don't check if ${FILE} is a CloudFormation file because VALIDATE_CLOUDFORMATION is: ${VALIDATE_CLOUDFORMATION}"
+    return 1
+  fi
+
   debug "Checking if ${FILE} is a Cloud Formation file..."
 
   # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-formats.html
   # AWSTemplateFormatVersion is optional
-  #######################################
-  # Check if file has AWS Template info #
-  #######################################
+
+  # Check if file has AWS Template info
   if grep -q 'AWSTemplateFormatVersion' "${FILE}" >/dev/null; then
-    # Found it
     return 0
   fi
 
-  #####################################
-  # See if it contains AWS References #
-  #####################################
+  # See if it contains AWS References
   if grep -q -E '(AWS|Alexa|Custom)::' "${FILE}" >/dev/null; then
-    # Found it
     return 0
   fi
 
-  #####################################################
-  # No identifiers of a CLOUDFORMATION template found #
-  #####################################################
   return 1
 }
-:
-#### Function DetectKubernetesFile #########################################
+
 DetectKubernetesFile() {
-  ################
-  # Pull in Vars #
-  ################
-  FILE="${1}" # File that we need to validate
+  FILE="${1}"
+
+  if [ "${VALIDATE_KUBERNETES_KUBECONFORM}" == "false" ]; then
+    debug "Don't check if ${FILE} is a Kubernetes file because VALIDATE_KUBERNETES_KUBECONFORM is: ${VALIDATE_KUBERNETES_KUBECONFORM}"
+    return 1
+  fi
+
   debug "Checking if ${FILE} is a Kubernetes descriptor..."
   if grep -q -v 'kustomize.config.k8s.io' "${FILE}" &&
     grep -q -v "tekton" "${FILE}" &&
@@ -171,168 +119,89 @@ DetectKubernetesFile() {
   debug "${FILE} is NOT a Kubernetes descriptor"
   return 1
 }
-:
-#### Function DetectAWSStatesFIle ##############################################
+
 DetectAWSStatesFIle() {
-  ################
-  # Pull in Vars #
-  ################
-  FILE="${1}" # File that we need to validate
+  FILE="${1}"
+
+  if [ "${VALIDATE_STATES}" == "false" ]; then
+    debug "Don't check if ${FILE} is an AWS states file because VALIDATE_STATES is: ${VALIDATE_STATES}"
+    return 1
+  fi
+
   debug "Checking if ${FILE} is a AWS states descriptor..."
 
   # https://states-language.net/spec.html#example
-  ###############################
-  # check if file has resources #
-  ###############################
   if grep -q '"Resource": *"arn' "${FILE}" &&
     grep -q '"States"' "${FILE}"; then
-    # Found it
     return 0
   fi
 
-  #################################################
-  # No identifiers of a AWS States Language found #
-  #################################################
   return 1
 }
-:
-#### Function CheckInArray #####################################################
-CheckInArray() {
-  ###############
-  # Pull in Var #
-  ###############
-  NEEDLE="$1" # Language we need to match
 
-  ######################################
-  # Check if Language was in the array #
-  ######################################
-  for LANG in "${UNIQUE_LINTED_ARRAY[@]}"; do
-    if [[ "${LANG}" == "${NEEDLE}" ]]; then
-      ############
-      # Found it #
-      ############
-      return 0
-    fi
-  done
-
-  ###################
-  # Did not find it #
-  ###################
-  return 1
-}
-:
-#### Function GetFileType ######################################################
 function GetFileType() {
   # Need to run the file through the 'file' exec to help determine
   # The type of file being parsed
 
-  ################
-  # Pull in Vars #
-  ################
   FILE="$1"
-
-  ##################
-  # Check the file #
-  ##################
   GET_FILE_TYPE_CMD=$(file "${FILE}" 2>&1)
 
   echo "${GET_FILE_TYPE_CMD}"
 }
-:
-#### Function CheckFileType ####################################################
+
 function CheckFileType() {
   # Need to run the file through the 'file' exec to help determine
   # The type of file being parsed
 
-  ################
-  # Pull in Vars #
-  ################
+  local FILE
   FILE="$1"
 
-  #################
-  # Get file type #
-  #################
+  local GET_FILE_TYPE_CMD
   GET_FILE_TYPE_CMD="$(GetFileType "$FILE")"
 
+  local FILE_TYPE_MESSAGE
+
   if [[ ${GET_FILE_TYPE_CMD} == *"Ruby script"* ]]; then
-    if [ "${SUPPRESS_FILE_TYPE_WARN}" == "false" ]; then
-      #######################
-      # It is a Ruby script #
-      #######################
-      warn "Found ruby script without extension:[.rb]"
-      info "Please update file with proper extensions."
-    fi
-    ################################
-    # Append the file to the array #
-    ################################
-    FILE_ARRAY_JSCPD+=("${FILE}")
-    FILE_ARRAY_RUBY+=("${FILE}")
+    FILE_TYPE_MESSAGE="Found Ruby script without extension (${FILE}). Rename the file with proper extension for Ruby files."
+    echo "${FILE}" >>"${FILE_ARRAYS_DIRECTORY_PATH}/file-array-RUBY"
   elif [[ ${GET_FILE_TYPE_CMD} == *"Python script"* ]]; then
-    if [ "${SUPPRESS_FILE_TYPE_WARN}" == "false" ]; then
-      #########################
-      # It is a Python script #
-      #########################
-      warn "Found Python script without extension:[.py]"
-      info "Please update file with proper extensions."
-    fi
-    ################################
-    # Append the file to the array #
-    ################################
-    FILE_ARRAY_JSCPD+=("${FILE}")
-    FILE_ARRAY_PYTHON+=("${FILE}")
+    FILE_TYPE_MESSAGE="Found Python script without extension (${FILE}). Rename the file with proper extension for Python files."
+    echo "${FILE}" >>"${FILE_ARRAYS_DIRECTORY_PATH}/file-array-PYTHON"
   elif [[ ${GET_FILE_TYPE_CMD} == *"Perl script"* ]]; then
-    if [ "${SUPPRESS_FILE_TYPE_WARN}" == "false" ]; then
-      #######################
-      # It is a Perl script #
-      #######################
-      warn "Found Perl script without extension:[.pl]"
-      info "Please update file with proper extensions."
-    fi
-    ################################
-    # Append the file to the array #
-    ################################
-    FILE_ARRAY_JSCPD+=("${FILE}")
-    FILE_ARRAY_PERL+=("${FILE}")
+    FILE_TYPE_MESSAGE="Found Perl script without extension (${FILE}). Rename the file with proper extension for Perl files."
+    echo "${FILE}" >>"${FILE_ARRAYS_DIRECTORY_PATH}/file-array-PERL"
   else
-    ############################
-    # Extension was not found! #
-    ############################
-    debug "Failed to get filetype for:[${FILE}]!"
+    FILE_TYPE_MESSAGE="Failed to get file type for: ${FILE}"
+  fi
+
+  if [ "${SUPPRESS_FILE_TYPE_WARN}" == "false" ]; then
+    warn "${FILE_TYPE_MESSAGE}"
+  else
+    debug "${FILE_TYPE_MESSAGE}"
   fi
 }
-:
-#### Function GetFileExtension ###############################################
+
 function GetFileExtension() {
-  ################
-  # Pull in Vars #
-  ################
   FILE="$1"
-
-  ###########################
-  # Get the files extension #
-  ###########################
-  # Extract just the file extension
+  # We want a lowercase value
+  local -l FILE_TYPE
+  # Extract the file extension
   FILE_TYPE=${FILE##*.}
-  # To lowercase
-  FILE_TYPE=${FILE_TYPE,,}
-
   echo "$FILE_TYPE"
 }
-:
-#### Function IsValidShellScript ###############################################
+
 function IsValidShellScript() {
-  ################
-  # Pull in Vars #
-  ################
   FILE="$1"
 
-  #################
-  # Get file type #
-  #################
+  if [ "${VALIDATE_BASH}" == "false" ] && [ "${VALIDATE_BASH_EXEC}" == "false" ] && [ "${VALIDATE_SHELL_SHFMT}" == "false" ]; then
+    debug "Don't check if ${FILE} is a shell script because VALIDATE_BASH, VALIDATE_BASH_EXEC, and VALIDATE_SHELL_SHFMT are set to: ${VALIDATE_BASH}, ${VALIDATE_BASH_EXEC}, ${VALIDATE_SHELL_SHFMT}"
+    return 1
+  fi
+
   FILE_EXTENSION="$(GetFileExtension "$FILE")"
   GET_FILE_TYPE_CMD="$(GetFileType "$FILE")"
 
-  trace "File:[${FILE}], File extension:[${FILE_EXTENSION}], File type: [${GET_FILE_TYPE_CMD}]"
+  debug "File:[${FILE}], File extension:[${FILE_EXTENSION}], File type: [${GET_FILE_TYPE_CMD}]"
 
   if [[ "${FILE_EXTENSION}" == "zsh" ]] ||
     [[ ${GET_FILE_TYPE_CMD} == *"zsh script"* ]]; then
@@ -358,179 +227,212 @@ function IsValidShellScript() {
     return 0
   fi
 
-  trace "$FILE is NOT a supported shell script. Skipping"
+  debug "$FILE is NOT a supported shell script. Skipping"
   return 1
 }
-:
-#### Function IsGenerated ######################################################
-function IsGenerated() {
-  # Pull in Vars #
-  ################
-  FILE="$1"
 
-  ##############################
-  # Check the file for keyword #
-  ##############################
-  grep -q "@generated" "$FILE"
+# HasNoShebang returns true if a file has no shebang line
+function HasNoShebang() {
+  local FILE SHEBANG FIRST_TWO
 
-  #######################
-  # Load the error code #
-  #######################
-  ERROR_CODE=$?
+  FILE="${1}"
+  SHEBANG='#!'
+  IFS= read -rn2 FIRST_TWO <"${FILE}"
 
-  if [ ${ERROR_CODE} -ne 0 ]; then
-    trace "File:[${FILE}] is not generated, because it doesn't have @generated marker"
+  if [[ ${FIRST_TWO} == "${SHEBANG}" ]]; then
     return 1
   fi
 
-  ##############################
-  # Check the file for keyword #
-  ##############################
-  grep -q "@not-generated" "$FILE"
+  debug "${FILE} doesn't contain a shebang"
+  return 0
+}
 
-  #######################
-  # Load the error code #
-  #######################
-  ERROR_CODE=$?
+function IsGenerated() {
+  FILE="$1"
 
-  if [ ${ERROR_CODE} -eq 0 ]; then
-    trace "File:[${FILE}] is not-generated because it has @not-generated marker"
+  if [ "${IGNORE_GENERATED_FILES}" == "false" ]; then
+    debug "Don't check if ${FILE} is generated because IGNORE_GENERATED_FILES is: ${IGNORE_GENERATED_FILES}"
+    return 1
+  fi
+
+  if ! grep -q "@generated" "$FILE"; then
+    debug "File:[${FILE}] is not generated, because it doesn't have @generated marker"
+    return 1
+  fi
+
+  if grep -q "@not-generated" "$FILE"; then
+    debug "File:[${FILE}] is not-generated because it has @not-generated marker"
     return 1
   else
-    trace "File:[${FILE}] is generated because it has @generated marker"
+    debug "File:[${FILE}] is generated because it has @generated marker"
     return 0
   fi
 }
-:
-#### Function RunAdditionalInstalls ############################################
+
+# We need these functions when building the file list with parallel
+export -f CheckFileType
+export -f DetectActions
+export -f DetectARMFile
+export -f DetectAWSStatesFIle
+export -f DetectCloudFormationFile
+export -f DetectKubernetesFile
+export -f DetectOpenAPIFile
+export -f DetectTektonFile
+export -f GetFileExtension
+export -f GetFileType
+export -f IsValidShellScript
+export -f HasNoShebang
+export -f IsGenerated
+
 function RunAdditionalInstalls() {
+
+  if [ -z "${FILE_ARRAYS_DIRECTORY_PATH}" ] || [ ! -d "${FILE_ARRAYS_DIRECTORY_PATH}" ]; then
+    fatal "FILE_ARRAYS_DIRECTORY_PATH (set to ${FILE_ARRAYS_DIRECTORY_PATH}) is empty or doesn't exist"
+  fi
+
   ##################################
   # Run installs for Psalm and PHP #
   ##################################
-  if [ "${VALIDATE_PHP_PSALM}" == "true" ] && [ "${#FILE_ARRAY_PHP_PSALM[@]}" -ne 0 ]; then
+  if [ "${VALIDATE_PHP_PSALM}" == "true" ] && [ -e "${FILE_ARRAYS_DIRECTORY_PATH}/file-array-PHP_PSALM" ]; then
     # found PHP files and were validating it, need to composer install
-    info "Found PHP files to validate, and [VALIDATE_PHP_PSALM] set to true, need to run composer install"
-    info "looking for composer.json in the users repository..."
-    mapfile -t COMPOSER_FILE_ARRAY < <(find / -name composer.json 2>&1)
-    debug "COMPOSER_FILE_ARRAY contents:[${COMPOSER_FILE_ARRAY[*]}]"
-    ############################################
-    # Check if we found the file in the system #
-    ############################################
+    info "Found PHP files to validate, and VALIDATE_PHP_PSALM is set to ${VALIDATE_PHP_PSALM}. Check if we need to run composer install"
+    mapfile -t COMPOSER_FILE_ARRAY < <(find "${GITHUB_WORKSPACE}" -name composer.json 2>&1)
+    debug "COMPOSER_FILE_ARRAY contents: ${COMPOSER_FILE_ARRAY[*]}"
     if [ "${#COMPOSER_FILE_ARRAY[@]}" -ne 0 ]; then
       for LINE in "${COMPOSER_FILE_ARRAY[@]}"; do
+        local COMPOSER_PATH
         COMPOSER_PATH=$(dirname "${LINE}" 2>&1)
-        info "Found [composer.json] at:[${LINE}]"
-        COMPOSER_CMD=$(
-          cd "${COMPOSER_PATH}" || exit 1
-          composer install --no-progress -q 2>&1
-        )
-
-        ##############
-        # Error code #
-        ##############
-        ERROR_CODE=$?
-
-        ##############################
-        # Check the shell for errors #
-        ##############################
-        if [ "${ERROR_CODE}" -ne 0 ]; then
-          # Error
-          error "ERROR! Failed to run composer install at location:[${COMPOSER_PATH}]"
-          fatal "ERROR:[${COMPOSER_CMD}]"
+        info "Found Composer file: ${LINE}"
+        local COMPOSER_CMD
+        if ! COMPOSER_CMD=$(cd "${COMPOSER_PATH}" && composer install --no-progress -q 2>&1); then
+          fatal "Failed to run composer install for ${COMPOSER_PATH}. Output: ${COMPOSER_CMD}"
         else
-          # Success
-          info "Successfully ran:[composer install] for PHP validation"
+          info "Successfully ran composer install."
         fi
+        debug "Composer install output: ${COMPOSER_CMD}"
       done
     fi
+  fi
+
+  if [ "${VALIDATE_PYTHON_MYPY}" == "true" ] && [ -e "${FILE_ARRAYS_DIRECTORY_PATH}/file-array-PYTHON_MYPY" ]; then
+    local MYPY_CACHE_DIRECTORY_PATH
+    MYPY_CACHE_DIRECTORY_PATH="${GITHUB_WORKSPACE}/.mypy_cache"
+    debug "Create MyPy cache directory: ${MYPY_CACHE_DIRECTORY_PATH}"
+    mkdir -p "${MYPY_CACHE_DIRECTORY_PATH}"
   fi
 
   ###############################
   # Run installs for R language #
   ###############################
-  if [ "${VALIDATE_R}" == "true" ] && [ "${#FILE_ARRAY_R[@]}" -ne 0 ]; then
+  if [ "${VALIDATE_R}" == "true" ] && [ -e "${FILE_ARRAYS_DIRECTORY_PATH}/file-array-R" ]; then
     info "Detected R Language files to lint."
-    info "Trying to install the R package inside:[${WORKSPACE_PATH}]"
-    #########################
-    # Run the build command #
-    #########################
-    BUILD_CMD=$(R CMD build "${WORKSPACE_PATH}" 2>&1)
-
-    ##############
-    # Error code #
-    ##############
-    ERROR_CODE=$?
-
-    ##############################
-    # Check the shell for errors #
-    ##############################
-    if [ "${ERROR_CODE}" -ne 0 ]; then
-      # Error
-      warn "ERROR! Failed to run:[R CMD build] at location:[${WORKSPACE_PATH}]"
-      warn "BUILD_CMD:[${BUILD_CMD}]"
+    info "Installing the R package in: ${GITHUB_WORKSPACE}"
+    local BUILD_CMD
+    if ! BUILD_CMD=$(R CMD build "${GITHUB_WORKSPACE}" 2>&1); then
+      warn "Failed to build R package in ${GITHUB_WORKSPACE}. Output: ${BUILD_CMD}"
     else
-      # Get the build package
-      BUILD_PKG=$(
-        cd "${WORKSPACE_PATH}" || exit 0
-        echo *.tar.gz 2>&1
-      )
-      ##############################
-      # Install the build packages #
-      ##############################
-      INSTALL_CMD=$(
-        cd "${WORKSPACE_PATH}" || exit 0
-        R -e "install.packages('remotes', repos = 'https://cloud.r-project.org/')" 2>&1
-        R -e "remotes::install_local('.', dependencies=T)" 2>&1
-      )
-
-      ##############
-      # Error code #
-      ##############
-      ERROR_CODE=$?
-
-      ##############################
-      # Check the shell for errors #
-      ##############################
-      debug "INSTALL_CMD:[${INSTALL_CMD}]"
-      if [ "${ERROR_CODE}" -ne 0 ]; then
-        warn "ERROR: Failed to install the build package at:[${BUILD_PKG}]"
+      local BUILD_PKG
+      if ! BUILD_PKG=$(cd "${GITHUB_WORKSPACE}" && echo *.tar.gz 2>&1); then
+        warn "Failed to echo R archives. Output: ${BUILD_PKG}"
       fi
+      debug "echo R archives output: ${BUILD_PKG}"
+      local INSTALL_CMD
+      if ! INSTALL_CMD=$(cd "${GITHUB_WORKSPACE}" && R -e "remotes::install_local('.', dependencies=T)" 2>&1); then
+        warn "Failed to install the R package. Output: ${BUILD_PKG}]"
+      fi
+      debug "R package install output: ${INSTALL_CMD}"
+    fi
+
+    if [ ! -f "${R_RULES_FILE_PATH_IN_ROOT}" ]; then
+      info "No .lintr configuration file found, using defaults."
+      cp "$R_LINTER_RULES" "$GITHUB_WORKSPACE"
+      # shellcheck disable=SC2034
+      AWESOME_LINTER_COPIED_R_LINTER_RULES_FILE="true"
     fi
   fi
 
   ####################################
   # Run installs for TFLINT language #
   ####################################
-  if [ "${VALIDATE_TERRAFORM_TFLINT}" == "true" ] && [ "${#FILE_ARRAY_TERRAFORM_TFLINT[@]}" -ne 0 ]; then
+  if [ "${VALIDATE_TERRAFORM_TFLINT}" == "true" ] && [ -e "${FILE_ARRAYS_DIRECTORY_PATH}/file-array-TERRAFORM_TFLINT" ]; then
     info "Detected TFLint Language files to lint."
-    info "Trying to install the TFLint init inside:[${WORKSPACE_PATH}]"
-    # Set the log level
-    TF_LOG_LEVEL="info"
-    if [ "${ACTIONS_RUNNER_DEBUG}" = "true" ]; then
-      TF_LOG_LEVEL="debug"
-    fi
-    debug "Set the tflint log level to: ${TF_LOG_LEVEL}"
-    #########################
-    # Run the build command #
-    #########################
-    BUILD_CMD=$(
-      cd "${WORKSPACE_PATH}" || exit 0
-      TFLINT_LOG="${TF_LOG_LEVEL}" tflint --init -c "${TERRAFORM_TFLINT_LINTER_RULES}" 2>&1
-    )
-
-    ##############
-    # Error code #
-    ##############
-    ERROR_CODE=$?
-
-    ##############################
-    # Check the shell for errors #
-    ##############################
-    if [ "${ERROR_CODE}" -ne 0 ]; then
-      fatal "ERROR! Failed to run:[tflint --init] at location:[${WORKSPACE_PATH}]. BUILD_CMD:[${BUILD_CMD}]"
+    info "Initializing TFLint in ${GITHUB_WORKSPACE}"
+    local BUILD_CMD
+    if ! BUILD_CMD=$(cd "${GITHUB_WORKSPACE}" && tflint --init -c "${TERRAFORM_TFLINT_LINTER_RULES}" 2>&1); then
+      fatal "ERROR! Failed to initialize tflint with the ${TERRAFORM_TFLINT_LINTER_RULES} config file: ${BUILD_CMD}"
     else
-      info "Successfully ran:[tflint --init] in workspace:[${WORKSPACE_PATH}]"
-      debug "BUILD_CMD:[${BUILD_CMD}]"
+      info "Successfully initialized tflint with the ${TERRAFORM_TFLINT_LINTER_RULES} config file"
+      debug "Tflint output: ${BUILD_CMD}"
     fi
+
+    # Array to track directories where tflint was run
+    local -A TFLINT_SEEN_DIRS
+    TFLINT_SEEN_DIRS=()
+    for FILE in "${FILE_ARRAY_TERRAFORM_TFLINT[@]}"; do
+      local DIR_NAME
+      DIR_NAME=$(dirname "${FILE}" 2>&1)
+      debug "DIR_NAME for ${FILE}: ${DIR_NAME}"
+      # Check the cache to see if we've already prepped this directory for tflint
+      if [[ ! -v "TFLINT_SEEN_DIRS[${DIR_NAME}]" ]]; then
+        debug "Configuring Terraform data directory for ${DIR_NAME}"
+
+        # Define the path to an empty Terraform data directory
+        # (def: https://developer.hashicorp.com/terraform/cli/config/environment-variables#tf_data_dir)
+        # in case the user has a Terraform data directory already, and we don't
+        # want to modify it.
+        # TFlint considers this variable as well.
+        # Ref: https://github.com/terraform-linters/tflint/blob/master/docs/user-guide/compatibility.md#environment-variables
+        TF_DATA_DIR="/tmp/.terraform-${TERRAFORM_TFLINT}-${DIR_NAME}"
+
+        # Fetch Terraform modules
+        debug "Fetch Terraform modules for ${FILE} in ${DIR_NAME} in ${TF_DATA_DIR}"
+        local FETCH_TERRAFORM_MODULES_CMD
+        if ! FETCH_TERRAFORM_MODULES_CMD="$(terraform get)"; then
+          fatal "Error when fetching Terraform modules while linting ${FILE}. Command output: ${FETCH_TERRAFORM_MODULES_CMD}"
+        fi
+        debug "Fetch Terraform modules command for ${FILE} output: ${FETCH_TERRAFORM_MODULES_CMD}"
+        # Let the cache know we've seen this before
+        # Set the value to an arbitrary non-empty string.
+        TFLINT_SEEN_DIRS[${DIR_NAME}]="false"
+      else
+        debug "Skip fetching Terraform modules for ${FILE} because we already did that for ${DIR_NAME}"
+      fi
+    done
+  fi
+
+  if [ "${VALIDATE_TERRAFORM_TERRASCAN}" == "true" ] && [ -e "${FILE_ARRAYS_DIRECTORY_PATH}/file-array-TERRAFORM_TERRASCAN" ]; then
+    info "Initializing Terrascan repository"
+    local -a TERRASCAN_INIT_COMMAND
+    TERRASCAN_INIT_COMMAND=(terrascan init -c "${TERRAFORM_TERRASCAN_LINTER_RULES}")
+    if [[ "${LOG_DEBUG}" == "true" ]]; then
+      TERRASCAN_INIT_COMMAND+=(--log-level "debug")
+    fi
+    debug "Terrascan init command: ${TERRASCAN_INIT_COMMAND[*]}"
+
+    local TERRASCAN_INIT_COMMAND_OUTPUT
+    if ! TERRASCAN_INIT_COMMAND_OUTPUT="$("${TERRASCAN_INIT_COMMAND[@]}" 2>&1)"; then
+      fatal "Error while initializing Terrascan:\n${TERRASCAN_INIT_COMMAND_OUTPUT}"
+    fi
+    debug "Terrascan init command output:\n${TERRASCAN_INIT_COMMAND_OUTPUT}"
+  fi
+
+  # Check if there's local configuration for the Raku linter
+  if [ -e "${GITHUB_WORKSPACE}/META6.json" ]; then
+    cd "${GITHUB_WORKSPACE}" && zef install --deps-only --/test .
   fi
 }
+
+function IsAnsibleDirectory() {
+  local FILE
+  FILE="$1"
+
+  debug "Checking if ${FILE} is the Ansible directory (${ANSIBLE_DIRECTORY})"
+  if [[ ("${FILE}" =~ .*${ANSIBLE_DIRECTORY}.*) ]] && [[ -d "${FILE}" ]]; then
+    debug "${FILE} is the Ansible directory"
+    return 0
+  else
+    debug "${FILE} is not the Ansible directory"
+    return 1
+  fi
+}
+export -f IsAnsibleDirectory

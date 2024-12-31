@@ -1,0 +1,39 @@
+---
+name: Feature request
+description: Suggest an idea for this project
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this feature request!
+        If this is a request to add a new language, after submitting this issue
+        check out [the instructions](https://github.com/khulnasoft-lab/awesome-linter/blob/main/docs/add-new-linter.md)
+        for more information on how to accomplish that.
+  - type: checkboxes
+    attributes:
+      label: Is there an existing issue for this?
+      description: Search to see if an issue already exists for the bug you encountered.
+      options:
+        - label: I have searched the existing issues
+          required: true
+  - type: textarea
+    attributes:
+      label: Current Behavior
+      description: A concise description of what you're experiencing.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Expected Behavior
+      description: A concise description of what you want to happen.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Anything else?
+      description: |
+        Links? References? Anything that will give us more context about the issue you are encountering.
+    validations:
+      required: false
