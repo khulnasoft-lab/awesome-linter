@@ -8,61 +8,61 @@
 # Get dependency images as build stages #
 #########################################
 FROM tenable/terrascan:1.19.9 AS terrascan
-FROM alpine/terragrunt:1.10.3 AS terragrunt
+FROM alpine/terragrunt:1.9.8 AS terragrunt
 FROM dotenvlinter/dotenv-linter:3.3.0 AS dotenv-linter
 FROM ghcr.io/terraform-linters/tflint:v0.54.0 AS tflint
 FROM ghcr.io/yannh/kubeconform:v0.6.7 AS kubeconfrm
-FROM alpine/helm:3.16.4 AS helm
-FROM golang:1.23.4-alpine AS golang
-FROM golangci/golangci-lint:v1.62.2 AS golangci-lint
-FROM goreleaser/goreleaser:v2.5.0 AS goreleaser
+FROM alpine/helm:3.16.3 AS helm
+FROM golang:1.23.3-alpine AS golang
+FROM golangci/golangci-lint:v1.62.0 AS golangci-lint
+FROM goreleaser/goreleaser:v2.4.8 AS goreleaser
 FROM hadolint/hadolint:v2.12.0-alpine AS dockerfile-lint
 FROM registry.k8s.io/kustomize/kustomize:v5.4.3 AS kustomize
-FROM hashicorp/terraform:1.10.3 AS terraform
+FROM hashicorp/terraform:1.9.8 AS terraform
 FROM koalaman/shellcheck:v0.10.0 AS shellcheck
 FROM mstruebing/editorconfig-checker:v3.0.3 AS editorconfig-checker
 FROM mvdan/shfmt:v3.10.0 AS shfmt
-FROM rhysd/actionlint:1.7.5 AS actionlint
+FROM rhysd/actionlint:1.7.4 AS actionlint
 FROM scalameta/scalafmt:v3.8.3 AS scalafmt
-FROM zricethezav/gitleaks:v8.22.0 AS gitleaks
-FROM yoheimuta/protolint:0.51.0 AS protolint
+FROM zricethezav/gitleaks:v8.21.2 AS gitleaks
+FROM yoheimuta/protolint:0.50.5 AS protolint
 FROM ghcr.io/clj-kondo/clj-kondo:2024.11.14-alpine AS clj-kondo
-FROM dart:3.6.0-sdk AS dart
-FROM mcr.microsoft.com/dotnet/sdk:9.0.101-alpine3.20 AS dotnet-sdk
+FROM dart:3.5.4-sdk AS dart
+FROM mcr.microsoft.com/dotnet/sdk:9.0.100-alpine3.20 AS dotnet-sdk
 FROM mcr.microsoft.com/powershell:7.4-alpine-3.20 AS powershell
-FROM composer/composer:2.8.4 AS php-composer
+FROM composer/composer:2.8.3 AS php-composer
 
-FROM python:3.13.1-alpine3.20 AS clang-format
+FROM python:3.12.7-alpine3.20 AS clang-format
 
 RUN apk add --no-cache \
-    build-base \
-    clang17 \
-    cmake \
-    git \
-    llvm17-dev \
-    ninja-is-really-ninja
+  build-base \
+  clang17 \
+  cmake \
+  git \
+  llvm17-dev \
+  ninja-is-really-ninja
 
 WORKDIR /tmp
 RUN git clone \
-    --branch "llvmorg-$(llvm-config  --version)" \
-    --depth 1 \
-    https://github.com/llvm/llvm-project.git
+  --branch "llvmorg-$(llvm-config  --version)" \
+  --depth 1 \
+  https://github.com/llvm/llvm-project.git
 
 WORKDIR /tmp/llvm-project/llvm/build
 RUN cmake \
-    -G Ninja \
-    -DCMAKE_BUILD_TYPE=MinSizeRel \
-    -DLLVM_BUILD_STATIC=ON \
-    -DLLVM_ENABLE_PROJECTS=clang \
-    -DCMAKE_C_COMPILER=clang \
-    -DCMAKE_CXX_COMPILER=clang++ .. \
-    && ninja clang-format \
-    && mv /tmp/llvm-project/llvm/build/bin/clang-format /usr/bin
+  -G Ninja \
+  -DCMAKE_BUILD_TYPE=MinSizeRel \
+  -DLLVM_BUILD_STATIC=ON \
+  -DLLVM_ENABLE_PROJECTS=clang \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ .. \
+  && ninja clang-format \
+  && mv /tmp/llvm-project/llvm/build/bin/clang-format /usr/bin
 
-FROM python:3.13.1-alpine3.20 AS python-builder
+FROM python:3.12.7-alpine3.20 AS python-builder
 
 RUN apk add --no-cache \
-    bash
+  bash
 
 SHELL ["/bin/bash", "-o", "errexit", "-o", "nounset", "-o", "pipefail", "-c"]
 
@@ -70,11 +70,11 @@ COPY dependencies/python/ /stage
 WORKDIR /stage
 RUN ./build-venvs.sh && rm -rfv /stage
 
-FROM python:3.13.1-alpine3.20 AS npm-builder
+FROM python:3.12.7-alpine3.20 AS npm-builder
 
 RUN apk add --no-cache \
-    bash \
-    nodejs-current
+  bash \
+  nodejs-current
 
 # The chown fixes broken uid/gid in ast-types-flow dependency
 # (see https://github.com/khulnasoft-lab/awesome-linter/issues/3901)
@@ -84,12 +84,11 @@ RUN apk add --no-cache \
 # apk del --no-network --purge .node-build-deps
 COPY dependencies/package.json dependencies/package-lock.json /
 RUN apk add --no-cache --virtual .node-build-deps \
-    npm \
-    && npm audit \
-    && npm install --strict-peer-deps \
-    && npm cache clean --force \
-    && chown -R "$(id -u)":"$(id -g)" node_modules \
-    && rm -rfv package.json package-lock.json
+  npm \
+  && npm install --strict-peer-deps \
+  && npm cache clean --force \
+  && chown -R "$(id -u)":"$(id -g)" node_modules \
+  && rm -rfv package.json package-lock.json
 
 FROM tflint AS tflint-plugins
 
@@ -102,11 +101,11 @@ COPY TEMPLATES/.tflint.hcl /action/lib/.automation/
 # Initialize TFLint plugins so we get plugin versions listed when we ask for TFLint version
 RUN --mount=type=secret,id=GITHUB_TOKEN GITHUB_TOKEN=$(cat /run/secrets/GITHUB_TOKEN) tflint --init -c /action/lib/.automation/.tflint.hcl
 
-FROM python:3.13.1-alpine3.20 AS lintr-installer
+FROM python:3.12.7-alpine3.20 AS lintr-installer
 
 RUN apk add --no-cache \
-    bash \
-    R
+  bash \
+  R
 
 SHELL ["/bin/bash", "-o", "errexit", "-o", "nounset", "-o", "pipefail", "-c"]
 
@@ -124,28 +123,28 @@ FROM php-composer AS php-linters
 COPY dependencies/composer/composer.json dependencies/composer/composer.lock /app/
 
 RUN composer update \
-    && composer audit
+  && composer audit
 
-FROM python:3.13.1-alpine3.20 AS base_image
+FROM python:3.12.7-alpine3.20 AS base_image
 
 LABEL com.github.actions.name="Awesome-Linter" \
-    com.github.actions.description="Awesome-linter is a ready-to-run collection of linters and code analyzers, to help validate your source code." \
-    com.github.actions.icon="code" \
-    com.github.actions.color="red" \
-    maintainer="@Hanse00, @ferrarimarco, @zkoppert" \
-    org.opencontainers.image.authors="Awesome Linter Contributors: https://github.com/khulnasoft-lab/awesome-linter/graphs/contributors" \
-    org.opencontainers.image.url="https://github.com/khulnasoft-lab/awesome-linter" \
-    org.opencontainers.image.source="https://github.com/khulnasoft-lab/awesome-linter" \
-    org.opencontainers.image.documentation="https://github.com/khulnasoft-lab/awesome-linter" \
-    org.opencontainers.image.description="A collection of code linters and analyzers."
+  com.github.actions.description="Awesome-linter is a ready-to-run collection of linters and code analyzers, to help validate your source code." \
+  com.github.actions.icon="code" \
+  com.github.actions.color="red" \
+  maintainer="@Hanse00, @ferrarimarco, @zkoppert" \
+  org.opencontainers.image.authors="Awesome Linter Contributors: https://github.com/khulnasoft-lab/awesome-linter/graphs/contributors" \
+  org.opencontainers.image.url="https://github.com/khulnasoft-lab/awesome-linter" \
+  org.opencontainers.image.source="https://github.com/khulnasoft-lab/awesome-linter" \
+  org.opencontainers.image.documentation="https://github.com/khulnasoft-lab/awesome-linter" \
+  org.opencontainers.image.description="A collection of code linters and analyzers."
 
 # https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
 ARG TARGETARCH
 
 # Install bash first so we can use it
-# This is also a Awesome-linter runtime dependency
+# This is also a awesome-linter runtime dependency
 RUN apk add --no-cache \
-    bash
+  bash
 
 SHELL ["/bin/bash", "-o", "errexit", "-o", "nounset", "-o", "pipefail", "-c"]
 
@@ -153,78 +152,78 @@ SHELL ["/bin/bash", "-o", "errexit", "-o", "nounset", "-o", "pipefail", "-c"]
 # Npm is not a runtime dependency but we need it to ensure that npm packages
 # are installed when we run the test suite.
 RUN apk add --no-cache \
-    ca-certificates \
-    coreutils \
-    curl \
-    file \
-    git \
-    git-lfs \
-    jq \
-    libxml2-utils \
-    npm \
-    nodejs-current \
-    openjdk17-jre \
-    openssh-client \
-    parallel \
-    perl \
-    php83 \
-    php83-ctype \
-    php83-curl \
-    php83-dom \
-    php83-iconv \
-    php83-pecl-igbinary \
-    php83-intl \
-    php83-mbstring \
-    php83-openssl \
-    php83-phar \
-    php83-simplexml \
-    php83-tokenizer \
-    php83-xmlwriter \
-    R \
-    rakudo \
-    ruby \
-    zef
+  ca-certificates \
+  coreutils \
+  curl \
+  file \
+  git \
+  git-lfs \
+  jq \
+  libxml2-utils \
+  npm \
+  nodejs-current \
+  openjdk17-jre \
+  openssh-client \
+  parallel \
+  perl \
+  php83 \
+  php83-ctype \
+  php83-curl \
+  php83-dom \
+  php83-iconv \
+  php83-pecl-igbinary \
+  php83-intl \
+  php83-mbstring \
+  php83-openssl \
+  php83-phar \
+  php83-simplexml \
+  php83-tokenizer \
+  php83-xmlwriter \
+  R \
+  rakudo \
+  ruby \
+  zef
 
 # Install Ruby tools
 COPY dependencies/Gemfile dependencies/Gemfile.lock /
 RUN apk add --no-cache --virtual .ruby-build-deps \
-    gcc \
-    make \
-    musl-dev \
-    ruby-bundler \
-    ruby-dev \
-    ruby-rdoc \
-    && bundle install \
-    && apk del --no-network --purge .ruby-build-deps \
-    && rm -rf Gemfile Gemfile.lock
+  gcc \
+  make \
+  musl-dev \
+  ruby-bundler \
+  ruby-dev \
+  ruby-rdoc \
+  && bundle install \
+  && apk del --no-network --purge .ruby-build-deps \
+  && rm -rf Gemfile Gemfile.lock
 
 ##############################
 # Installs Perl dependencies #
 ##############################
 RUN apk add --no-cache --virtual .perl-build-deps \
-    gcc \
-    make \
-    musl-dev \
-    perl-dev \
-    && curl --retry 5 --retry-delay 5 -sL https://cpanmin.us/ \
-    | perl - -nq --no-wget \
-    Perl::Critic \
-    Perl::Critic::Bangs \
-    Perl::Critic::Community \
-    Perl::Critic::Lax \
-    Perl::Critic::More \
-    Perl::Critic::StricterSubs \
-    Perl::Critic::Swift \
-    Perl::Critic::Tics \
-    && rm -rf /root/.cpanm \
-    && apk del --no-network --purge .perl-build-deps
+  gcc \
+  make \
+  musl-dev \
+  perl-dev \
+  && curl --retry 5 --retry-delay 5 -sL https://cpanmin.us/ \
+  | perl - -nq --no-wget \
+  Perl::Critic \
+  Perl::Critic::Bangs \
+  Perl::Critic::Community \
+  Perl::Critic::Lax \
+  Perl::Critic::More \
+  Perl::Critic::StricterSubs \
+  Perl::Critic::Swift \
+  Perl::Critic::Tics \
+  && rm -rf /root/.cpanm \
+  && apk del --no-network --purge .perl-build-deps
 
 #################
 # Install glibc #
 #################
 COPY scripts/install-glibc.sh /
 RUN --mount=type=secret,id=GITHUB_TOKEN /install-glibc.sh \
-    && rm -rf /install-glibc.sh
+  && rm -rf /install-glibc.sh
 
 ##################
 # Install chktex #
@@ -253,7 +252,7 @@ COPY --from=php-linters /app/vendor "${PHP_COMPOSER_PACKAGES_DIR}"
 COPY scripts/install-ktlint.sh /
 COPY dependencies/ktlint /ktlint
 RUN --mount=type=secret,id=GITHUB_TOKEN /install-ktlint.sh \
-    && rm -rfv /install-ktlint.sh /ktlint
+  && rm -rfv /install-ktlint.sh /ktlint
 
 ######################
 # Install CheckStyle #
@@ -261,7 +260,7 @@ RUN --mount=type=secret,id=GITHUB_TOKEN /install-ktlint.sh \
 COPY scripts/install-checkstyle.sh /
 COPY dependencies/checkstyle /checkstyle
 RUN --mount=type=secret,id=GITHUB_TOKEN /install-checkstyle.sh \
-    && rm -rfv /install-checkstyle.sh /checkstyle
+  && rm -rfv /install-checkstyle.sh /checkstyle
 
 ##############################
 # Install google-java-format #
@@ -269,7 +268,7 @@ RUN --mount=type=secret,id=GITHUB_TOKEN /install-checkstyle.sh \
 COPY scripts/install-google-java-format.sh /
 COPY dependencies/google-java-format /google-java-format
 RUN --mount=type=secret,id=GITHUB_TOKEN /install-google-java-format.sh \
-    && rm -rfv /install-google-java-format.sh /google-java-format
+  && rm -rfv /install-google-java-format.sh /google-java-format
 
 ################
 # Install Helm #
@@ -414,6 +413,7 @@ ENV PATH="${PATH}:/venvs/cpplint/bin"
 ENV PATH="${PATH}:/venvs/flake8/bin"
 ENV PATH="${PATH}:/venvs/isort/bin"
 ENV PATH="${PATH}:/venvs/mypy/bin"
+ENV PATH="${PATH}:/venvs/nbqa/bin"
 ENV PATH="${PATH}:/venvs/pyink/bin"
 ENV PATH="${PATH}:/venvs/pylint/bin"
 ENV PATH="${PATH}:/venvs/ruff/bin"
@@ -435,6 +435,11 @@ ENV RENOVATE_X_IGNORE_RE2="true"
 ENV VERSION_FILE="/action/linterVersions.txt"
 RUN mkdir /action
 
+# create the homedir, so that in case it is not present (like on action-runner-controller based selfhosted runners)
+# we do not fail at setting /github/workspace as a safe git directory
+ENV HOME="/github/home"
+RUN mkdir -p "${HOME}"
+
 ENTRYPOINT ["/action/lib/linter.sh"]
 
 FROM base_image AS slim
@@ -443,7 +448,7 @@ FROM base_image AS slim
 ENV IMAGE="slim"
 COPY scripts/linterVersions.sh /
 RUN /linterVersions.sh \
-    && rm -rfv /linterVersions.sh
+  && rm -rfv /linterVersions.sh
 
 ###################################
 # Copy linter configuration files #
@@ -454,7 +459,7 @@ COPY TEMPLATES /action/lib/.automation
 # Ref: https://scalameta.org/scalafmt/docs/configuration.html#version
 COPY --from=base_image /tmp/scalafmt-version.txt /tmp/scalafmt-version.txt
 RUN echo "version = $(cat /tmp/scalafmt-version.txt)" >> /action/lib/.automation/.scalafmt.conf \
-    && rm /tmp/scalafmt-version.txt
+  && rm /tmp/scalafmt-version.txt
 
 #################################
 # Copy awesome-linter executables #
@@ -468,8 +473,8 @@ ARG BUILD_REVISION
 ARG BUILD_VERSION
 
 LABEL org.opencontainers.image.created=$BUILD_DATE \
-    org.opencontainers.image.revision=$BUILD_REVISION \
-    org.opencontainers.image.version=$BUILD_VERSION
+  org.opencontainers.image.revision=$BUILD_REVISION \
+  org.opencontainers.image.version=$BUILD_VERSION
 
 ENV BUILD_DATE=$BUILD_DATE
 ENV BUILD_REVISION=$BUILD_REVISION
@@ -488,8 +493,8 @@ ENV PATH="${PATH}:/var/cache/dotnet/tools:/usr/share/dotnet"
 
 # Install awesome-linter runtime dependencies
 RUN apk add --no-cache \
-    rust-clippy \
-    rustfmt
+  rust-clippy \
+  rustfmt
 
 ###################################
 # Install DotNet and Dependencies #
@@ -508,11 +513,11 @@ COPY --from=powershell /opt/microsoft/powershell /opt/microsoft/powershell
 ENV POWERSHELL_TELEMETRY_OPTOUT=1
 ARG PSSA_VERSION='1.22.0'
 RUN PS_INSTALL_FOLDER="$(cat /tmp/PS_INSTALL_FOLDER)" \
-    && echo "PS_INSTALL_FOLDER: ${PS_INSTALL_FOLDER}" \
-    && ln -s "${PS_INSTALL_FOLDER}/pwsh" /usr/bin/pwsh \
-    && chmod a+x,o-w "${PS_INSTALL_FOLDER}/pwsh" \
-    && pwsh -c "Install-Module -Name PSScriptAnalyzer -RequiredVersion ${PSSA_VERSION} -Scope AllUsers -Force" \
-    && rm -rf /tmp/PS_INSTALL_FOLDER
+  && echo "PS_INSTALL_FOLDER: ${PS_INSTALL_FOLDER}" \
+  && ln -s "${PS_INSTALL_FOLDER}/pwsh" /usr/bin/pwsh \
+  && chmod a+x,o-w "${PS_INSTALL_FOLDER}/pwsh" \
+  && pwsh -c "Install-Module -Name PSScriptAnalyzer -RequiredVersion ${PSSA_VERSION} -Scope AllUsers -Force" \
+  && rm -rf /tmp/PS_INSTALL_FOLDER
 
 #############################################################
 # Install Azure Resource Manager Template Toolkit (arm-ttk) #
@@ -524,7 +529,7 @@ RUN --mount=type=secret,id=GITHUB_TOKEN /install-arm-ttk.sh && rm -rf /install-a
 ENV IMAGE="standard"
 COPY scripts/linterVersions.sh /
 RUN /linterVersions.sh \
-    && rm -rfv /linterVersions.sh
+  && rm -rfv /linterVersions.sh
 
 ###################################
 # Copy linter configuration files #
@@ -535,7 +540,7 @@ COPY TEMPLATES /action/lib/.automation
 # Ref: https://scalameta.org/scalafmt/docs/configuration.html#version
 COPY --from=base_image /tmp/scalafmt-version.txt /tmp/scalafmt-version.txt
 RUN echo "version = $(cat /tmp/scalafmt-version.txt)" >> /action/lib/.automation/.scalafmt.conf \
-    && rm /tmp/scalafmt-version.txt
+  && rm /tmp/scalafmt-version.txt
 
 #################################
 # Copy awesome-linter executables #
@@ -549,8 +554,8 @@ ARG BUILD_REVISION
 ARG BUILD_VERSION
 
 LABEL org.opencontainers.image.created=$BUILD_DATE \
-    org.opencontainers.image.revision=$BUILD_REVISION \
-    org.opencontainers.image.version=$BUILD_VERSION
+  org.opencontainers.image.revision=$BUILD_REVISION \
+  org.opencontainers.image.version=$BUILD_VERSION
 
 ENV BUILD_DATE=$BUILD_DATE
 ENV BUILD_REVISION=$BUILD_REVISION
