@@ -70,7 +70,7 @@ ifeq ($(GITHUB_TOKEN),)
 GITHUB_TOKEN="$(shell cat "${GITHUB_TOKEN_PATH}")"
 endif
 
-DEV_CONTAINER_URL := "awesome-linter/dev-container:latest"
+DEV_CONTAINER_URL := "khulnasoft/dev-container:latest"
 
 ifeq ($(GITHUB_HEAD_REF),)
 RELEASE_PLEASE_TARGET_BRANCH := "$(shell git branch --show-current)"
