@@ -30,7 +30,7 @@ FROM ghcr.io/clj-kondo/clj-kondo:2025.01.16-alpine AS clj-kondo
 FROM dart:3.6.1-sdk AS dart
 FROM mcr.microsoft.com/dotnet/sdk:9.0.102-alpine3.20 AS dotnet-sdk
 FROM mcr.microsoft.com/powershell:7.4-alpine-3.20 AS powershell
-FROM composer/composer:2.8.4 AS php-composer
+FROM composer/composer:2.8.5 AS php-composer
 
 FROM python:3.13.1-alpine3.20 AS clang-format
 
