@@ -40,7 +40,7 @@ endif
 
 # Default to latest
 ifeq ($(AWESOME_LINTER_TEST_CONTAINER_URL),)
-AWESOME_LINTER_TEST_CONTAINER_URL := "ghcr.io/awesome-linter/awesome-linter:latest"
+AWESOME_LINTER_TEST_CONTAINER_URL := "ghcr.io/khulnasoft-lab/awesome-linter:latest"
 endif
 
 ifeq ($(BUILD_DATE),)
@@ -639,7 +639,7 @@ release-please-dry-run: build-dev-container-image check-github-token ## Run rele
 		--config-file .github/release-please/release-please-config.json \
 		--dry-run \
 		--manifest-file .github/release-please/.release-please-manifest.json \
-		--repo-url awesome-linter/awesome-linter \
+		--repo-url khulnasoft-lab/awesome-linter \
 		--target-branch ${RELEASE_PLEASE_TARGET_BRANCH} \
 		--token "${GITHUB_TOKEN}" \
 		--trace
