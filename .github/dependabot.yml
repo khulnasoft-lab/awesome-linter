@@ -148,6 +148,7 @@ updates:
           - isort
           - mypy
           - nbqa
+          - nbqa
           - pyink
           - pylint
           - ruff
