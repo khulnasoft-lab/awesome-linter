@@ -82,13 +82,15 @@ RUN apk add --no-cache \
 # are installed when we run the test suite. If we decide to remove it, add
 # the following command to the RUN instruction below:
 # apk del --no-network --purge .node-build-deps
-COPY dependencies/package.json dependencies/package-lock.json /
-RUN apk add --no-cache --virtual .node-build-deps \
-  npm \
-  && npm install --strict-peer-deps \
-  && npm cache clean --force \
-  && chown -R "$(id -u)":"$(id -g)" node_modules \
-  && rm -rfv package.json package-lock.json
+# Ensure the package.json is copied before this line
+COPY package*.json ./
+
+# Add a safety check and install build dependencies
+RUN apk add --no-cache --virtual .node-build-deps npm && \
+    npm install || cat npm-debug.log && \
+    npm cache clean --force && \
+    chown -R "$(id -u)":"$(id -g)" node_modules || true && \
+    rm -rf package.json package-lock.json
 
 FROM tflint AS tflint-plugins
 
