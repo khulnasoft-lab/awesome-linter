@@ -87,7 +87,7 @@ COPY package*.json ./
 
 # Add a safety check and install build dependencies
 RUN apk add --no-cache --virtual .node-build-deps npm && \
-    npm install || cat npm-debug.log && \
+    npm install --legacy-peer-deps || cat npm-debug.log && \
     npm cache clean --force && \
     chown -R "$(id -u)":"$(id -g)" node_modules || true && \
     rm -rf package.json package-lock.json
