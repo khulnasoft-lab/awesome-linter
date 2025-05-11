@@ -83,7 +83,7 @@ RUN apk add --no-cache \
 # the following command to the RUN instruction below:
 # apk del --no-network --purge .node-build-deps
 # Ensure the package.json is copied before this line
-COPY package*.json ./
+COPY dependencies/package*.json ./
 
 # Add a safety check and install build dependencies
 RUN apk add --no-cache --virtual .node-build-deps npm && \
