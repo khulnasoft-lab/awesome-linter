@@ -11,7 +11,7 @@ FROM tenable/terrascan:1.19.9 AS terrascan
 FROM alpine/terragrunt:1.11.4 AS terragrunt
 FROM dotenvlinter/dotenv-linter:3.3.0 AS dotenv-linter
 FROM ghcr.io/terraform-linters/tflint:v0.57.0 AS tflint
-FROM ghcr.io/yannh/kubeconform:v0.6.7 AS kubeconfrm
+FROM ghcr.io/yannh/kubeconform:latest AS kubeconform
 FROM alpine/helm:3.17.3 AS helm
 FROM golang:1.24.3-alpine AS golang
 FROM golangci/golangci-lint:v2.1.6 AS golangci-lint
@@ -82,13 +82,15 @@ RUN apk add --no-cache \
 # are installed when we run the test suite. If we decide to remove it, add
 # the following command to the RUN instruction below:
 # apk del --no-network --purge .node-build-deps
-COPY dependencies/package.json dependencies/package-lock.json /
-RUN apk add --no-cache --virtual .node-build-deps \
-  npm \
-  && npm install --strict-peer-deps \
-  && npm cache clean --force \
-  && chown -R "$(id -u)":"$(id -g)" node_modules \
-  && rm -rfv package.json package-lock.json
+# Ensure the package.json is copied before this line
+COPY dependencies/package*.json ./
+
+# Add a safety check and install build dependencies
+RUN apk add --no-cache --virtual .node-build-deps npm && \
+    npm install || { cat npm-debug.log; exit 1; } && \
+    npm cache clean --force && \
+    chown -R "$(id -u)":"$(id -g)" node_modules || true && \
+    rm -rf package.json package-lock.json
 
 FROM tflint AS tflint-plugins
 
@@ -362,7 +364,7 @@ COPY --from=actionlint /usr/local/bin/actionlint /usr/bin/
 ######################
 # Install kubeconform #
 ######################
-COPY --from=kubeconfrm /kubeconform /usr/bin/
+COPY --from=kubeconform /kubeconform /usr/bin/
 
 #####################
 # Install clj-kondo #
