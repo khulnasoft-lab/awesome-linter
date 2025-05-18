@@ -12,7 +12,7 @@ export -f IssueHintForFullGitHistory
 
 function GenerateFileDiff() {
   local DIFF_GIT_DEFAULT_BRANCH_CMD
-  DIFF_GIT_DEFAULT_BRANCH_CMD="git -C \"${GITHUB_WORKSPACE}\" diff --diff-filter=d --name-only ${DEFAULT_BRANCH}...${GITHUB_SHA} | xargs -I % sh -c 'echo \"${GITHUB_WORKSPACE}/%\"' 2>&1"
+  DIFF_GIT_DEFAULT_BRANCH_CMD="git -C \"${GITHUB_WORKSPACE}\" diff --diff-filter=d --name-only ${DEFAULT_BRANCH}..${GITHUB_SHA} | xargs -I % sh -c 'echo \"${GITHUB_WORKSPACE}/%\"' 2>&1"
 
   if [ "${GITHUB_EVENT_NAME:-}" == "push" ]; then
     local DIFF_TREE_CMD
