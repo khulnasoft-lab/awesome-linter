@@ -8,7 +8,7 @@
 # Get dependency images as build stages #
 #########################################
 FROM tenable/terrascan:1.19.9 AS terrascan
-FROM alpine/terragrunt:1.11.4 AS terragrunt
+FROM alpine/terragrunt:1.12.0 AS terragrunt
 FROM dotenvlinter/dotenv-linter:3.3.0 AS dotenv-linter
 FROM ghcr.io/terraform-linters/tflint:v0.57.0 AS tflint
 FROM ghcr.io/yannh/kubeconform:latest AS kubeconform
@@ -25,7 +25,7 @@ FROM mvdan/shfmt:v3.11.0 AS shfmt
 FROM rhysd/actionlint:1.7.7 AS actionlint
 FROM scalameta/scalafmt:v3.9.6 AS scalafmt
 FROM zricethezav/gitleaks:v8.26.0 AS gitleaks
-FROM yoheimuta/protolint:0.55.3 AS protolint
+FROM yoheimuta/protolint:0.55.5 AS protolint
 FROM ghcr.io/clj-kondo/clj-kondo:2025.04.07-alpine AS clj-kondo
 FROM dart:3.7.3-sdk AS dart
 FROM mcr.microsoft.com/dotnet/sdk:9.0.203-alpine3.20 AS dotnet-sdk
