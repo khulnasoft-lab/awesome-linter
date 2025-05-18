@@ -67,10 +67,11 @@ RUN apk add --no-cache \
 SHELL ["/bin/bash", "-o", "errexit", "-o", "nounset", "-o", "pipefail", "-c"]
 
 COPY dependencies/python/ /stage
+COPY scripts/build-venvs.sh /stage/
 WORKDIR /stage
 RUN ./build-venvs.sh && rm -rfv /stage
 
-FROM python:3.13.3-alpine3.20 AS npm-builder
+FROM python:3.13.3-alpine3.21 AS npm-builder
 
 RUN apk add --no-cache \
   bash \
@@ -83,14 +84,13 @@ RUN apk add --no-cache \
 # the following command to the RUN instruction below:
 # apk del --no-network --purge .node-build-deps
 # Ensure the package.json is copied before this line
-COPY dependencies/package*.json ./
-
-# Add a safety check and install build dependencies
-RUN apk add --no-cache --virtual .node-build-deps npm && \
-    npm install || { cat npm-debug.log; exit 1; } && \
-    npm cache clean --force && \
-    chown -R "$(id -u)":"$(id -g)" node_modules || true && \
-    rm -rf package.json package-lock.json
+COPY dependencies/package.json dependencies/package-lock.json /
+RUN apk add --no-cache --virtual .node-build-deps \
+  npm \
+  && npm install --force \
+  && npm cache clean --force \
+  && chown -R "$(id -u)":"$(id -g)" node_modules \
+  && rm -rfv package.json package-lock.json
 
 FROM tflint AS tflint-plugins
 
