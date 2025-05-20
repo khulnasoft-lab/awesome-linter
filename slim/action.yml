@@ -1,10 +1,10 @@
 ---
 name: "Awesome-Linter slim"
-author: "Awesome-linter contributors"
+author: "KhulnaSoft, Lab"
 description: "Awesome-linter is a ready-to-run collection of linters and code analyzers, to help validate your source code."
 runs:
   using: "docker"
-  image: "docker://ghcr.io/khulnasoft-lab/awesome-linter:slim-v7.2.1" # x-release-please-version
+  image: "docker://ghcr.io/khulnasoft-lab/awesome-linter:main" # x-release-please-version
 branding:
   icon: "check-square"
   color: "white"
