@@ -25,7 +25,7 @@ while [ "${COUNT}" -lt "${RETRIES}" ]; do
   sleep "${DELAY}"
 done
 
-if [[ ! -d "./chktex/chktex" ]]; then
+if [[ ! -d "./chktex" ]]; then
   echo "chktex directory doesn't exist."
   exit 1
 fi
