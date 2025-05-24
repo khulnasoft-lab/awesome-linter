@@ -231,7 +231,12 @@ RUN --mount=type=secret,id=GITHUB_TOKEN /install-glibc.sh \
 # Install chktex #
 ##################
 COPY scripts/install-chktex.sh /
-RUN --mount=type=secret,id=GITHUB_TOKEN /install-chktex.sh && rm -rf /install-chktex.sh
+
+RUN --mount=type=secret,id=GITHUB_TOKEN \
+    chmod +x /install-chktex.sh && \
+    /install-chktex.sh && \
+    rm -rf /install-chktex.sh
+
 # Set work directory back to root because some scripts depend on it
 WORKDIR /
 
