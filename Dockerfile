@@ -12,7 +12,7 @@ FROM alpine/terragrunt:1.12.1 AS terragrunt
 FROM dotenvlinter/dotenv-linter:3.3.0 AS dotenv-linter
 FROM ghcr.io/terraform-linters/tflint:v0.58.0 AS tflint
 FROM ghcr.io/yannh/kubeconform:latest AS kubeconform
-FROM alpine/helm:3.18.0 AS helm
+FROM alpine/helm:3.18.1 AS helm
 FROM golang:1.24.3-alpine AS golang
 FROM golangci/golangci-lint:v2.1.6 AS golangci-lint
 FROM goreleaser/goreleaser:v2.9.0 AS goreleaser
@@ -23,9 +23,9 @@ FROM koalaman/shellcheck:v0.10.0 AS shellcheck
 FROM mstruebing/editorconfig-checker:v3.3.0 AS editorconfig-checker
 FROM mvdan/shfmt:v3.11.0 AS shfmt
 FROM rhysd/actionlint:1.7.7 AS actionlint
-FROM scalameta/scalafmt:v3.9.6 AS scalafmt
-FROM zricethezav/gitleaks:v8.26.0 AS gitleaks
-FROM yoheimuta/protolint:0.55.5 AS protolint
+FROM scalameta/scalafmt:v3.9.7 AS scalafmt
+FROM zricethezav/gitleaks:v8.27.0 AS gitleaks
+FROM yoheimuta/protolint:0.55.6 AS protolint
 FROM ghcr.io/clj-kondo/clj-kondo:2025.04.07-alpine AS clj-kondo
 FROM dart:3.8.0-sdk AS dart
 FROM mcr.microsoft.com/dotnet/sdk:9.0.203-alpine3.20 AS dotnet-sdk
