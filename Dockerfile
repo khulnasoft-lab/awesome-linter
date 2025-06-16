@@ -71,7 +71,7 @@ COPY scripts/build-venvs.sh /stage/
 WORKDIR /stage
 RUN ./build-venvs.sh && rm -rfv /stage
 
-FROM python:3.13.3-alpine3.21 AS npm-builder
+FROM python:3.13.5-alpine3.21 AS npm-builder
 
 RUN apk add --no-cache \
   bash \
