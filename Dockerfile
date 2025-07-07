@@ -17,11 +17,11 @@ FROM golang:1.24.4-alpine AS golang
 FROM golangci/golangci-lint:v2.2.1 AS golangci-lint
 FROM goreleaser/goreleaser:v2.10.2 AS goreleaser
 FROM hadolint/hadolint:v2.12.0-alpine AS dockerfile-lint
-FROM registry.k8s.io/kustomize/kustomize:v5.6.0 AS kustomize
+FROM registry.k8s.io/kustomize/kustomize:v5.7.0 AS kustomize
 FROM hashicorp/terraform:1.12.2 AS terraform
 FROM koalaman/shellcheck:v0.10.0 AS shellcheck
 FROM mstruebing/editorconfig-checker:v3.3.0 AS editorconfig-checker
-FROM mvdan/shfmt:v3.11.0 AS shfmt
+FROM mvdan/shfmt:v3.12.0 AS shfmt
 FROM rhysd/actionlint:1.7.7 AS actionlint
 FROM scalameta/scalafmt:v3.9.8 AS scalafmt
 FROM zricethezav/gitleaks:v8.27.2 AS gitleaks
