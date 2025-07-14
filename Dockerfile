@@ -10,12 +10,12 @@
 FROM tenable/terrascan:1.19.9 AS terrascan
 FROM alpine/terragrunt:1.12.2 AS terragrunt
 FROM dotenvlinter/dotenv-linter:3.3.0 AS dotenv-linter
-FROM ghcr.io/terraform-linters/tflint:v0.58.0 AS tflint
+FROM ghcr.io/terraform-linters/tflint:v0.58.1 AS tflint
 FROM ghcr.io/yannh/kubeconform:latest AS kubeconform
 FROM alpine/helm:3.18.3 AS helm
-FROM golang:1.24.4-alpine AS golang
-FROM golangci/golangci-lint:v2.2.1 AS golangci-lint
-FROM goreleaser/goreleaser:v2.10.2 AS goreleaser
+FROM golang:1.24.5-alpine AS golang
+FROM golangci/golangci-lint:v2.2.2 AS golangci-lint
+FROM goreleaser/goreleaser:v2.11.0 AS goreleaser
 FROM hadolint/hadolint:v2.12.0-alpine AS dockerfile-lint
 FROM registry.k8s.io/kustomize/kustomize:v5.7.0 AS kustomize
 FROM hashicorp/terraform:1.12.2 AS terraform
@@ -30,7 +30,7 @@ FROM ghcr.io/clj-kondo/clj-kondo:2025.06.05-alpine AS clj-kondo
 FROM dart:3.8.1-sdk AS dart
 FROM mcr.microsoft.com/dotnet/sdk:9.0.203-alpine3.20 AS dotnet-sdk
 FROM mcr.microsoft.com/powershell:7.5-alpine-3.20 AS powershell
-FROM composer/composer:2.8.9 AS php-composer
+FROM composer/composer:2.8.10 AS php-composer
 
 FROM python:3.13.3-alpine3.20 AS clang-format
 
