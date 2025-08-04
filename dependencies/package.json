@@ -8,7 +8,7 @@
     "@commitlint/config-conventional": "^19.8.1",
     "@react-native/eslint-config": "^0.80.1",
     "@stoplight/spectral-cli": "^6.15.0",
-    "@typescript-eslint/eslint-plugin": "^8.37.0",
+    "@typescript-eslint/eslint-plugin": "^8.38.0",
     "asl-validator": "^4.0.0",
     "commitlint": "^19.8.1",
     "eslint": "^9.31.0",
@@ -49,6 +49,6 @@
     "textlint-filter-rule-allowlist": "^4.0.0",
     "textlint-filter-rule-comments": "^1.2.2",
     "textlint-rule-terminology": "^5.2.14",
-    "typescript": "^5.5.4"
+    "typescript": "^5.9.2"
   }
 }
