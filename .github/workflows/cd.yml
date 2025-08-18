@@ -33,7 +33,7 @@ jobs:
       CONTAINER_IMAGE_TARGET: "${{ matrix.images.target }}"
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -224,7 +224,7 @@ jobs:
             ghcr.io/khulnasoft-lab/awesome-linter:slim-${{ env.SEMVER_MAJOR_VERSION }}
             ghcr.io/khulnasoft-lab/awesome-linter:slim-${{ env.RELEASE_VERSION }}
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
