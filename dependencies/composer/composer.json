@@ -1,7 +1,7 @@
 {
   "$schema": "https://getcomposer.org/schema.json",
   "require": {
-    "squizlabs/php_codesniffer": "^3.11",
+    "squizlabs/php_codesniffer": "^4.0",
     "phpstan/phpstan": "^2.1",
     "vimeo/psalm": "^6.8",
     "php": "^8.3.16"
